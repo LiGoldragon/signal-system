@@ -32,9 +32,10 @@ This contract defines its records locally
 `InputBufferObservation`, `ObservationGeneration`, etc.) because they're the
 channel's vocabulary, not records that travel beyond.
 
-If a future channel needs `SystemTarget` (e.g. a
-harness-discovery channel), lift it to
-`signal-persona`'s umbrella records. For now, local.
+If a future channel needs `SystemTarget` (e.g. a harness-discovery channel),
+make or update the relation-specific `signal-persona-*` contract for that
+relation. Do not lift system observation payloads into `signal-persona`; that
+crate is the top-level engine-manager contract.
 
 ## Messages
 
