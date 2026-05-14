@@ -22,7 +22,7 @@
 
 use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode, NotaEnum, NotaRecord, NotaTransparent};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use signal_core::{SemaVerb, signal_channel};
+use signal_core::signal_channel;
 
 // ─── Target identity ──────────────────────────────────────
 
@@ -274,10 +274,10 @@ pub enum SystemUnimplementedReason {
 
 signal_channel! {
     request SystemRequest {
-        FocusSubscription(FocusSubscription),
-        FocusUnsubscription(FocusUnsubscription),
-        FocusSnapshot(FocusSnapshot),
-        SystemStatusQuery(SystemStatusQuery),
+        Subscribe FocusSubscription(FocusSubscription),
+        Retract FocusUnsubscription(FocusUnsubscription),
+        Match FocusSnapshot(FocusSnapshot),
+        Match SystemStatusQuery(SystemStatusQuery),
     }
     reply SystemEvent {
         FocusObservation(FocusObservation),
@@ -290,14 +290,6 @@ signal_channel! {
 }
 
 impl SystemRequest {
-    pub const fn signal_verb(&self) -> SemaVerb {
-        match self {
-            Self::FocusSubscription(_) => SemaVerb::Subscribe,
-            Self::FocusUnsubscription(_) => SemaVerb::Retract,
-            Self::FocusSnapshot(_) | Self::SystemStatusQuery(_) => SemaVerb::Match,
-        }
-    }
-
     pub fn operation_kind(&self) -> SystemOperationKind {
         match self {
             Self::FocusSubscription(_) => SystemOperationKind::FocusSubscription,

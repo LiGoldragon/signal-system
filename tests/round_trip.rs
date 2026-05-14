@@ -7,7 +7,7 @@
 //! length-prefixed Frame.
 
 use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
-use signal_core::{FrameBody, Reply, Request, SemaVerb};
+use signal_core::{FrameBody, Reply, Request, SignalVerb};
 use signal_persona_system::{
     FocusObservation, FocusSnapshot, FocusSubscription, FocusUnsubscription, Frame,
     ObservationGeneration, ObservationTargetMissing, SubscriptionAccepted, SubscriptionKind,
@@ -20,10 +20,7 @@ const TARGET: SystemTarget = SystemTarget::niri_window(223);
 
 fn round_trip_request(request: SystemRequest) -> SystemRequest {
     let expected_verb = request.signal_verb();
-    let frame = Frame::new(FrameBody::Request(Request::operation(
-        expected_verb,
-        request,
-    )));
+    let frame = Frame::new(FrameBody::Request(request.into_signal_request()));
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = Frame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
@@ -156,21 +153,21 @@ fn system_request_variants_declare_expected_signal_root_verbs() {
     let cases = [
         (
             SystemRequest::FocusSubscription(FocusSubscription { target: TARGET }),
-            SemaVerb::Subscribe,
+            SignalVerb::Subscribe,
         ),
         (
             SystemRequest::FocusUnsubscription(FocusUnsubscription { target: TARGET }),
-            SemaVerb::Retract,
+            SignalVerb::Retract,
         ),
         (
             SystemRequest::FocusSnapshot(FocusSnapshot { target: TARGET }),
-            SemaVerb::Match,
+            SignalVerb::Match,
         ),
         (
             SystemRequest::SystemStatusQuery(SystemStatusQuery {
                 backend: SystemBackend::Niri,
             }),
-            SemaVerb::Match,
+            SignalVerb::Match,
         ),
     ];
 

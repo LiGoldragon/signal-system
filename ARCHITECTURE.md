@@ -54,10 +54,10 @@ target-missing event is an explicit typed fact, not a wire-level
 
 ### Signal root verbs
 
-Every `SystemRequest` variant declares its root verb through
-`SystemRequest::signal_verb()`. The method currently returns
-`signal_core::SemaVerb`; this crate keeps that spelling until the
-coordinated `signal-core` `SignalVerb` rename lands.
+Every `SystemRequest` variant declares its root verb in the
+`signal_channel!` declaration. `signal-core` generates
+`SystemRequest::signal_verb()` and `SystemRequest::into_signal_request()`
+from that declaration.
 
 ```text
 FocusSubscription   -> Subscribe
