@@ -1,0 +1,53 @@
+;; Canonical NOTA examples for signal-persona-system.
+;;
+;; One example per request variant, reply variant, and stream event
+;; variant. The text-form head is the payload's record-head, not the
+;; SystemRequest / SystemReply / SystemEvent variant name — see
+;; ARCHITECTURE.md §7 "NOTA codec quirk on signal_channel! payload
+;; heads." `SystemTarget` is the exception: it has a hand-written
+;; codec where the variant head IS the typed payload.
+;;
+;; Round-trip witness: tests/canonical_examples.rs parses each record
+;; and asserts the re-encoded text equals the canonical form.
+
+;; ─── Requests ─────────────────────────────────────────────────────
+
+;; SystemRequest::FocusSubscription
+(FocusSubscription (NiriWindow 223))
+
+;; SystemRequest::FocusSubscriptionRetraction — payload head is the token type
+(FocusSubscriptionToken (NiriWindow 223))
+
+;; SystemRequest::FocusSnapshot
+(FocusSnapshot (NiriWindow 223))
+
+;; SystemRequest::SystemStatusQuery
+(SystemStatusQuery Niri)
+
+;; ─── Replies ──────────────────────────────────────────────────────
+
+;; SystemReply::SubscriptionAccepted
+(SubscriptionAccepted (NiriWindow 223) Focus)
+
+;; SystemReply::SubscriptionRetracted — Path A final ack
+(SubscriptionRetracted (FocusSubscriptionToken (NiriWindow 223)))
+
+;; SystemReply::ObservationTargetMissing
+(ObservationTargetMissing (NiriWindow 999))
+
+;; SystemReply::SystemStatus
+(SystemStatus Niri Running Ready)
+
+;; SystemReply::SystemRequestUnimplemented
+(SystemRequestUnimplemented FocusSnapshot NotBuiltYet)
+
+;; SystemReply::FocusSnapshotReply — payload head is FocusObservation
+(FocusObservation (NiriWindow 223) true 12)
+
+;; ─── Stream events on FocusEventStream ────────────────────────────
+
+;; SystemEvent::FocusObservation
+(FocusObservation (NiriWindow 223) true 12)
+
+;; SystemEvent::WindowClosed
+(WindowClosed (NiriWindow 223))
