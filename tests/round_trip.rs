@@ -495,3 +495,49 @@ impl DriftScan {
         }
     }
 }
+
+#[test]
+fn system_daemon_configuration_round_trips_through_nota_text() {
+    use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
+    use signal_persona::{SocketMode, WirePath};
+    use signal_persona_auth::{OwnerIdentity, UnixUserId};
+    use signal_persona_system::{SystemBackend, SystemDaemonConfiguration};
+
+    let configuration = SystemDaemonConfiguration {
+        system_socket_path: WirePath::new("/run/persona/X/system.sock"),
+        system_socket_mode: SocketMode::new(0o600),
+        supervision_socket_path: WirePath::new("/run/persona/X/system-supervision.sock"),
+        supervision_socket_mode: SocketMode::new(0o600),
+        backend: SystemBackend::Niri,
+        owner_identity: OwnerIdentity::UnixUser(UnixUserId::new(1000)),
+    };
+
+    let mut encoder = Encoder::new();
+    configuration.encode(&mut encoder).expect("encode configuration");
+    let text = encoder.into_string();
+    let mut decoder = Decoder::new(&text);
+    let recovered = SystemDaemonConfiguration::decode(&mut decoder).expect("decode configuration");
+
+    assert_eq!(recovered, configuration);
+}
+
+#[test]
+fn system_daemon_configuration_round_trips_through_rkyv() {
+    use nota_config::ConfigurationRecord;
+    use signal_persona::{SocketMode, WirePath};
+    use signal_persona_auth::{OwnerIdentity, UnixUserId};
+    use signal_persona_system::{SystemBackend, SystemDaemonConfiguration};
+
+    let configuration = SystemDaemonConfiguration {
+        system_socket_path: WirePath::new("/run/persona/X/system.sock"),
+        system_socket_mode: SocketMode::new(0o600),
+        supervision_socket_path: WirePath::new("/run/persona/X/system-supervision.sock"),
+        supervision_socket_mode: SocketMode::new(0o600),
+        backend: SystemBackend::Niri,
+        owner_identity: OwnerIdentity::UnixUser(UnixUserId::new(1000)),
+    };
+
+    let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&configuration).expect("archive");
+    let recovered = SystemDaemonConfiguration::from_rkyv_bytes(&bytes).expect("decode rkyv");
+    assert_eq!(recovered, configuration);
+}

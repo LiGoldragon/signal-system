@@ -341,3 +341,36 @@ impl SystemRequest {
         }
     }
 }
+
+// ─── Daemon configuration ──────────────────────────────────
+//
+// Typed startup configuration for `persona-system-daemon`. The
+// persona manager writes one of these (NOTA or rkyv) to a state-dir
+// path and passes that path as argv. The daemon decodes through
+// `nota_config::ConfigurationSource::from_argv()?.decode()?` and
+// runs with the resulting record. No environment variables on the
+// production launch path.
+
+/// Startup configuration for `persona-system-daemon`.
+///
+/// Replaces the previous positional `<socket>` argv plus
+/// `PERSONA_SOCKET_MODE`, `PERSONA_SUPERVISION_SOCKET_PATH`, and
+/// `PERSONA_SUPERVISION_SOCKET_MODE` argv/environment-variable
+/// surface.
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+pub struct SystemDaemonConfiguration {
+    /// Where the daemon binds its system Unix socket.
+    pub system_socket_path: signal_persona::WirePath,
+    /// chmod applied to the system socket after bind.
+    pub system_socket_mode: signal_persona::SocketMode,
+    /// Where the daemon binds its supervision Unix socket.
+    pub supervision_socket_path: signal_persona::WirePath,
+    /// chmod applied to the supervision socket after bind.
+    pub supervision_socket_mode: signal_persona::SocketMode,
+    /// The compositor/system backend the daemon presents.
+    pub backend: SystemBackend,
+    /// The engine owner identity passed to the system daemon.
+    pub owner_identity: signal_persona_auth::OwnerIdentity,
+}
+
+nota_config::impl_rkyv_configuration!(SystemDaemonConfiguration);
