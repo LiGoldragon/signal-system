@@ -7,6 +7,12 @@ It relates one router subscription client to the system observer:
 the router names observation targets and the system mints
 observation generations.
 
+> Status: persona-system is paused (per `persona-system/ARCHITECTURE.md`
+> §0.7). This contract holds the Path A reply-side close shape; the
+> system unpauses with a real consumer reading
+> `SystemReply::SubscriptionRetracted` to terminate its in-flight
+> `FocusSubscription`.
+
 ## Channel
 
 | Side | Component |
@@ -39,17 +45,27 @@ crate is the top-level engine-manager contract.
 ## Messages
 
 ```
-SystemRequest                    SystemReply
-├─ FocusSubscription             ├─ SubscriptionAccepted
-├─ FocusUnsubscription           ├─ ObservationTargetMissing
-├─ FocusSnapshot                 ├─ SystemStatus
-└─ SystemStatusQuery             ├─ SystemRequestUnimplemented
-                                 └─ FocusSnapshotReply
+SystemRequest                            SystemReply
+├─ FocusSubscription                     ├─ SubscriptionAccepted
+├─ FocusSubscriptionRetraction(token)    ├─ SubscriptionRetracted(token)
+├─ FocusSnapshot                         ├─ ObservationTargetMissing
+└─ SystemStatusQuery                     ├─ SystemStatus
+                                         ├─ SystemRequestUnimplemented
+                                         └─ FocusSnapshotReply
 
 SystemEvent
 ├─ FocusObservation
 └─ WindowClosed
 ```
+
+Subscription close follows the **Path A** discipline per /181: the
+router sends `Retract FocusSubscriptionRetraction(FocusSubscriptionToken)`
+naming the subscription it wants to close; the system responds with
+`SystemReply::SubscriptionRetracted(SubscriptionRetracted { token })`
+carrying the same token. `FocusSubscriptionToken` is the per-stream
+identity — structurally `{ target: SystemTarget }`, the same shape as
+`FocusSubscription`'s payload, but a distinct type so subscribe / close
+sites don't conflate "open this stream" with "name the stream to close."
 
 Closed enums; no `Unknown` variant on the wire (the
 target-missing event is an explicit typed fact, not a wire-level
@@ -63,14 +79,16 @@ Every `SystemRequest` variant declares its root verb in the
 from that declaration.
 
 ```text
-FocusSubscription   -> Subscribe
-FocusUnsubscription -> Retract
-FocusSnapshot       -> Match
-SystemStatusQuery   -> Match
+FocusSubscription             -> Subscribe
+FocusSubscriptionRetraction   -> Retract
+FocusSnapshot                 -> Match
+SystemStatusQuery             -> Match
 ```
 
-Subscriptions establish a push stream. Unsubscriptions retract that stream.
-One-shot observations and status reads use `Match`, not `Assert`.
+Subscriptions establish a push stream. Retractions close that stream
+and the system acks with `SystemReply::SubscriptionRetracted` carrying
+the token (Path A). One-shot observations and status reads use `Match`,
+not `Assert`.
 
 Prompt cleanliness, typed write leases, and programmatic write-injection
 acknowledgements are terminal transport records. They live in
@@ -131,6 +149,19 @@ Architectural-truth tests fire when:
 - The Frame's encode/decode bytes don't match.
 - A consumer tries to dispatch on a variant that isn't in
   the closed enum.
+
+## Constraints
+
+- Subscription close uses **Path A** reply-side variant. The
+  `FocusSubscription` request opens the focus-observation stream;
+  the `FocusSubscriptionRetraction` retract request (carrying a
+  `FocusSubscriptionToken`) closes it; the system acks with
+  `SystemReply::SubscriptionRetracted` echoing the token.
+- Wire enums are closed; no `Unknown` variants travel on the wire.
+- Every `SystemRequest` variant declares its root verb in the
+  `signal_channel!` declaration.
+- One-shot reads (`FocusSnapshot`, `SystemStatusQuery`) use the
+  `Match` verb; only `FocusSubscription` uses `Subscribe`.
 
 ## Non-ownership
 

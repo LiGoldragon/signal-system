@@ -3,12 +3,23 @@
 //! Read this file as the public interface of the OS-facts
 //! channel. The channel carries:
 //!
-//! - **Subscription requests** from the router (start /
-//!   stop watching a target's focus state).
+//! - **Focus subscription requests** from the router
+//!   (`Subscribe FocusSubscription`).
+//! - **Focus subscription retraction requests** from the
+//!   router (`Retract FocusSubscriptionRetraction` carrying
+//!   a `FocusSubscriptionToken`). Retraction follows the
+//!   **Path A** discipline per /181: the system acks the
+//!   retraction with a typed `SubscriptionRetracted` reply
+//!   carrying the closed token, not a request-only
+//!   fire-and-forget op.
 //! - **One-shot observation requests** from the router
-//!   (current focus state right now, no subscription).
+//!   (`Match FocusSnapshot` — current focus state right
+//!   now, no subscription established).
+//! - **Component status query** from the router
+//!   (`Match SystemStatusQuery`).
 //! - **Observation events** from `persona-system` (focus
-//!   changes and target lifecycle).
+//!   changes and target lifecycle) emitted on the
+//!   `FocusEventStream` after a subscription opens.
 //!
 //! The channel is **bidirectional**: the router initiates
 //! subscriptions; the system pushes observation events back
@@ -129,9 +140,15 @@ pub struct FocusSubscription {
     pub target: SystemTarget,
 }
 
-/// Stop receiving focus events for `target`.
+/// Per-subscription identity for the focus event stream. Carried in the
+/// `FocusSubscription`-shaped retract request and echoed back in the
+/// `SubscriptionRetracted` reply so callers can match the ack to the
+/// request they sent. Matches the structural shape of
+/// `<Channel>SubscriptionToken` newtypes per /176 §1 stream-block
+/// grammar (`signal-persona-terminal::TerminalWorkerLifecycleToken` is
+/// the worked example).
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
-pub struct FocusUnsubscription {
+pub struct FocusSubscriptionToken {
     pub target: SystemTarget,
 }
 
@@ -164,7 +181,7 @@ pub enum SystemBackend {
 )]
 pub enum SystemOperationKind {
     FocusSubscription,
-    FocusUnsubscription,
+    FocusSubscriptionRetraction,
     FocusSnapshot,
     SystemStatusQuery,
 }
@@ -254,6 +271,17 @@ pub enum SystemReadiness {
     Unavailable,
 }
 
+/// Typed acknowledgement that a focus-event subscription has been
+/// retracted. Returned in reply to a `FocusSubscriptionRetraction` request.
+/// Carries the retracted token so callers can match the ack to the
+/// request they sent. This is the Path A reply variant per /181;
+/// retraction is a closed reply event signaling the stream is over,
+/// not a request-only fire-and-forget op.
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+pub struct SubscriptionRetracted {
+    pub token: FocusSubscriptionToken,
+}
+
 /// A recognized request reached the system daemon, but that
 /// operation is not implemented by this daemon skeleton yet.
 #[derive(
@@ -276,12 +304,13 @@ signal_channel! {
     channel System {
         request SystemRequest {
             Subscribe FocusSubscription(FocusSubscription) opens FocusEventStream,
-            Retract FocusUnsubscription(FocusUnsubscription),
+            Retract FocusSubscriptionRetraction(FocusSubscriptionToken),
             Match FocusSnapshot(FocusSnapshot),
             Match SystemStatusQuery(SystemStatusQuery),
         }
         reply SystemReply {
             SubscriptionAccepted(SubscriptionAccepted),
+            SubscriptionRetracted(SubscriptionRetracted),
             ObservationTargetMissing(ObservationTargetMissing),
             SystemStatus(SystemStatus),
             SystemRequestUnimplemented(SystemRequestUnimplemented),
@@ -292,10 +321,10 @@ signal_channel! {
             WindowClosed(WindowClosed) belongs FocusEventStream,
         }
         stream FocusEventStream {
-            token FocusUnsubscription;
+            token FocusSubscriptionToken;
             opened SubscriptionAccepted;
             event FocusObservation;
-            close FocusUnsubscription;
+            close FocusSubscriptionRetraction;
         }
     }
 }
@@ -304,7 +333,9 @@ impl SystemRequest {
     pub fn operation_kind(&self) -> SystemOperationKind {
         match self {
             Self::FocusSubscription(_) => SystemOperationKind::FocusSubscription,
-            Self::FocusUnsubscription(_) => SystemOperationKind::FocusUnsubscription,
+            Self::FocusSubscriptionRetraction(_) => {
+                SystemOperationKind::FocusSubscriptionRetraction
+            }
             Self::FocusSnapshot(_) => SystemOperationKind::FocusSnapshot,
             Self::SystemStatusQuery(_) => SystemOperationKind::SystemStatusQuery,
         }

@@ -12,11 +12,11 @@ use signal_core::{
     SignalVerb, StreamEventIdentifier, SubReply, SubscriptionTokenInner,
 };
 use signal_persona_system::{
-    FocusObservation, FocusSnapshot, FocusSubscription, FocusUnsubscription, ObservationGeneration,
-    ObservationTargetMissing, SubscriptionAccepted, SubscriptionKind, SystemBackend, SystemEvent,
-    SystemFrame, SystemFrameBody, SystemHealth, SystemOperationKind, SystemReadiness, SystemReply,
-    SystemRequest, SystemRequestUnimplemented, SystemStatus, SystemStatusQuery, SystemTarget,
-    SystemUnimplementedReason, WindowClosed,
+    FocusObservation, FocusSnapshot, FocusSubscription, FocusSubscriptionToken,
+    ObservationGeneration, ObservationTargetMissing, SubscriptionAccepted, SubscriptionKind,
+    SubscriptionRetracted, SystemBackend, SystemEvent, SystemFrame, SystemFrameBody, SystemHealth,
+    SystemOperationKind, SystemReadiness, SystemReply, SystemRequest, SystemRequestUnimplemented,
+    SystemStatus, SystemStatusQuery, SystemTarget, SystemUnimplementedReason, WindowClosed,
 };
 
 const TARGET: SystemTarget = SystemTarget::niri_window(223);
@@ -121,17 +121,37 @@ fn focus_subscription_request_round_trips_through_nota_text() {
 }
 
 #[test]
-fn focus_unsubscription_round_trips() {
-    let request = SystemRequest::FocusUnsubscription(FocusUnsubscription { target: TARGET });
+fn focus_subscription_retraction_round_trips() {
+    let request =
+        SystemRequest::FocusSubscriptionRetraction(FocusSubscriptionToken { target: TARGET });
     let decoded = round_trip_request(request.clone());
     assert_eq!(decoded, request);
 }
 
 #[test]
-fn focus_unsubscription_request_round_trips_through_nota_text() {
+fn focus_subscription_retraction_request_round_trips_through_nota_text() {
     round_trip_nota(
-        SystemRequest::FocusUnsubscription(FocusUnsubscription { target: TARGET }),
-        "(FocusUnsubscription (NiriWindow 223))",
+        SystemRequest::FocusSubscriptionRetraction(FocusSubscriptionToken { target: TARGET }),
+        "(FocusSubscriptionToken (NiriWindow 223))",
+    );
+}
+
+#[test]
+fn subscription_retracted_reply_round_trips() {
+    let reply = SystemReply::SubscriptionRetracted(SubscriptionRetracted {
+        token: FocusSubscriptionToken { target: TARGET },
+    });
+    let decoded = round_trip_reply(reply.clone());
+    assert_eq!(decoded, reply);
+}
+
+#[test]
+fn subscription_retracted_reply_round_trips_through_nota_text() {
+    round_trip_nota(
+        SystemReply::SubscriptionRetracted(SubscriptionRetracted {
+            token: FocusSubscriptionToken { target: TARGET },
+        }),
+        "(SubscriptionRetracted (FocusSubscriptionToken (NiriWindow 223)))",
     );
 }
 
@@ -177,8 +197,8 @@ fn system_request_exposes_contract_owned_operation_kind() {
             SystemOperationKind::FocusSubscription,
         ),
         (
-            SystemRequest::FocusUnsubscription(FocusUnsubscription { target: TARGET }),
-            SystemOperationKind::FocusUnsubscription,
+            SystemRequest::FocusSubscriptionRetraction(FocusSubscriptionToken { target: TARGET }),
+            SystemOperationKind::FocusSubscriptionRetraction,
         ),
         (
             SystemRequest::FocusSnapshot(FocusSnapshot { target: TARGET }),
@@ -205,7 +225,7 @@ fn system_request_variants_declare_expected_signal_root_verbs() {
             SignalVerb::Subscribe,
         ),
         (
-            SystemRequest::FocusUnsubscription(FocusUnsubscription { target: TARGET }),
+            SystemRequest::FocusSubscriptionRetraction(FocusSubscriptionToken { target: TARGET }),
             SignalVerb::Retract,
         ),
         (
@@ -229,8 +249,8 @@ fn system_request_variants_declare_expected_signal_root_verbs() {
 fn system_operation_kind_round_trips_through_nota_text() {
     round_trip_nota(SystemOperationKind::FocusSubscription, "FocusSubscription");
     round_trip_nota(
-        SystemOperationKind::FocusUnsubscription,
-        "FocusUnsubscription",
+        SystemOperationKind::FocusSubscriptionRetraction,
+        "FocusSubscriptionRetraction",
     );
     round_trip_nota(SystemOperationKind::FocusSnapshot, "FocusSnapshot");
     round_trip_nota(SystemOperationKind::SystemStatusQuery, "SystemStatusQuery");
