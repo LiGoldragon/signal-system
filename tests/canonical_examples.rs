@@ -28,21 +28,21 @@ fn canonical_request_examples_round_trip() {
     let expected: Vec<(SystemRequest, &str)> = vec![
         (
             SystemRequest::FocusSubscription(FocusSubscription { target: target() }),
-            "(FocusSubscription (NiriWindow 223))",
+            "(FocusSubscription ((NiriWindow 223)))",
         ),
         (
             SystemRequest::FocusSubscriptionRetraction(token()),
-            "(FocusSubscriptionToken (NiriWindow 223))",
+            "(FocusSubscriptionRetraction ((NiriWindow 223)))",
         ),
         (
             SystemRequest::FocusSnapshot(FocusSnapshot { target: target() }),
-            "(FocusSnapshot (NiriWindow 223))",
+            "(FocusSnapshot ((NiriWindow 223)))",
         ),
         (
             SystemRequest::SystemStatusQuery(SystemStatusQuery {
                 backend: SystemBackend::Niri,
             }),
-            "(SystemStatusQuery Niri)",
+            "(SystemStatusQuery (Niri))",
         ),
     ];
 
@@ -71,17 +71,17 @@ fn canonical_reply_examples_round_trip() {
                 target: target(),
                 kind: SubscriptionKind::Focus,
             }),
-            "(SubscriptionAccepted (NiriWindow 223) Focus)",
+            "(SubscriptionAccepted ((NiriWindow 223) Focus))",
         ),
         (
             SystemReply::SubscriptionRetracted(SubscriptionRetracted { token: token() }),
-            "(SubscriptionRetracted (FocusSubscriptionToken (NiriWindow 223)))",
+            "(SubscriptionRetracted (((NiriWindow 223))))",
         ),
         (
             SystemReply::ObservationTargetMissing(ObservationTargetMissing {
                 target: SystemTarget::niri_window(999),
             }),
-            "(ObservationTargetMissing (NiriWindow 999))",
+            "(ObservationTargetMissing ((NiriWindow 999)))",
         ),
         (
             SystemReply::SystemStatus(SystemStatus {
@@ -89,14 +89,14 @@ fn canonical_reply_examples_round_trip() {
                 health: SystemHealth::Running,
                 readiness: SystemReadiness::Ready,
             }),
-            "(SystemStatus Niri Running Ready)",
+            "(SystemStatus (Niri Running Ready))",
         ),
         (
             SystemReply::SystemRequestUnimplemented(SystemRequestUnimplemented {
                 operation: SystemOperationKind::FocusSnapshot,
                 reason: SystemUnimplementedReason::NotBuiltYet,
             }),
-            "(SystemRequestUnimplemented FocusSnapshot NotBuiltYet)",
+            "(SystemRequestUnimplemented (FocusSnapshot NotBuiltYet))",
         ),
         (
             SystemReply::FocusSnapshotReply(FocusObservation {
@@ -104,7 +104,7 @@ fn canonical_reply_examples_round_trip() {
                 focused: true,
                 generation: ObservationGeneration::new(12),
             }),
-            "(FocusObservation (NiriWindow 223) true 12)",
+            "(FocusSnapshotReply ((NiriWindow 223) True 12))",
         ),
     ];
 
@@ -134,11 +134,11 @@ fn canonical_event_examples_round_trip() {
                 focused: true,
                 generation: ObservationGeneration::new(12),
             }),
-            "(FocusObservation (NiriWindow 223) true 12)",
+            "(FocusObservation ((NiriWindow 223) True 12))",
         ),
         (
             SystemEvent::WindowClosed(WindowClosed { target: target() }),
-            "(WindowClosed (NiriWindow 223))",
+            "(WindowClosed ((NiriWindow 223)))",
         ),
     ];
 

@@ -116,7 +116,7 @@ fn focus_subscription_round_trips() {
 fn focus_subscription_request_round_trips_through_nota_text() {
     round_trip_nota(
         SystemRequest::FocusSubscription(FocusSubscription { target: TARGET }),
-        "(FocusSubscription (NiriWindow 223))",
+        "(FocusSubscription ((NiriWindow 223)))",
     );
 }
 
@@ -132,7 +132,7 @@ fn focus_subscription_retraction_round_trips() {
 fn focus_subscription_retraction_request_round_trips_through_nota_text() {
     round_trip_nota(
         SystemRequest::FocusSubscriptionRetraction(FocusSubscriptionToken { target: TARGET }),
-        "(FocusSubscriptionToken (NiriWindow 223))",
+        "(FocusSubscriptionRetraction ((NiriWindow 223)))",
     );
 }
 
@@ -151,7 +151,7 @@ fn subscription_retracted_reply_round_trips_through_nota_text() {
         SystemReply::SubscriptionRetracted(SubscriptionRetracted {
             token: FocusSubscriptionToken { target: TARGET },
         }),
-        "(SubscriptionRetracted (FocusSubscriptionToken (NiriWindow 223)))",
+        "(SubscriptionRetracted (((NiriWindow 223))))",
     );
 }
 
@@ -166,7 +166,7 @@ fn focus_snapshot_round_trips() {
 fn focus_snapshot_request_round_trips_through_nota_text() {
     round_trip_nota(
         SystemRequest::FocusSnapshot(FocusSnapshot { target: TARGET }),
-        "(FocusSnapshot (NiriWindow 223))",
+        "(FocusSnapshot ((NiriWindow 223)))",
     );
 }
 
@@ -185,7 +185,7 @@ fn system_status_query_round_trips_through_nota_text() {
         SystemRequest::SystemStatusQuery(SystemStatusQuery {
             backend: SystemBackend::Niri,
         }),
-        "(SystemStatusQuery Niri)",
+        "(SystemStatusQuery (Niri))",
     );
 }
 
@@ -286,7 +286,7 @@ fn focus_observation_event_round_trips_through_nota_text() {
             focused: true,
             generation: ObservationGeneration::new(42),
         }),
-        "(FocusObservation (NiriWindow 223) true 42)",
+        "(FocusObservation ((NiriWindow 223) True 42))",
     );
 }
 
@@ -301,7 +301,7 @@ fn window_closed_round_trips() {
 fn window_closed_event_round_trips_through_nota_text() {
     round_trip_nota(
         SystemEvent::WindowClosed(WindowClosed { target: TARGET }),
-        "(WindowClosed (NiriWindow 223))",
+        "(WindowClosed ((NiriWindow 223)))",
     );
 }
 
@@ -322,7 +322,7 @@ fn subscription_accepted_reply_round_trips_through_nota_text() {
             target: TARGET,
             kind: SubscriptionKind::Focus,
         }),
-        "(SubscriptionAccepted (NiriWindow 223) Focus)",
+        "(SubscriptionAccepted ((NiriWindow 223) Focus))",
     );
 }
 
@@ -337,7 +337,7 @@ fn observation_target_missing_round_trips() {
 fn observation_target_missing_reply_round_trips_through_nota_text() {
     round_trip_nota(
         SystemReply::ObservationTargetMissing(ObservationTargetMissing { target: TARGET }),
-        "(ObservationTargetMissing (NiriWindow 223))",
+        "(ObservationTargetMissing ((NiriWindow 223)))",
     );
 }
 
@@ -360,7 +360,7 @@ fn system_status_reply_round_trips_through_nota_text() {
             health: SystemHealth::Running,
             readiness: SystemReadiness::Ready,
         }),
-        "(SystemStatus Niri Running Ready)",
+        "(SystemStatus (Niri Running Ready))",
     );
 }
 
@@ -393,7 +393,7 @@ fn focus_snapshot_reply_round_trips_through_nota_text() {
             focused: true,
             generation: ObservationGeneration::new(44),
         }),
-        "(FocusObservation (NiriWindow 223) true 44)",
+        "(FocusSnapshotReply ((NiriWindow 223) True 44))",
     );
 }
 
@@ -404,7 +404,7 @@ fn system_request_unimplemented_reply_round_trips_through_nota_text() {
             operation: SystemOperationKind::FocusSubscription,
             reason: SystemUnimplementedReason::NotBuiltYet,
         }),
-        "(SystemRequestUnimplemented FocusSubscription NotBuiltYet)",
+        "(SystemRequestUnimplemented (FocusSubscription NotBuiltYet))",
     );
 }
 

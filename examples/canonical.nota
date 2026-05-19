@@ -1,11 +1,17 @@
 ;; Canonical NOTA examples for signal-persona-system.
 ;;
 ;; One example per request variant, reply variant, and stream event
-;; variant. The text-form head is the payload's record-head, not the
-;; SystemRequest / SystemReply / SystemEvent variant name — see
-;; ARCHITECTURE.md §7 "NOTA codec quirk on signal_channel! payload
-;; heads." `SystemTarget` is the exception: it has a hand-written
-;; codec where the variant head IS the typed payload.
+;; variant. Per the three-case PascalCase rule, each data-carrying
+;; enum variant on the wire is `(VariantName <payload>)`; the inner
+;; payload is a NotaRecord-derived struct encoded as a tag-less
+;; `(fields…)`. The outer head names the *Request / *Reply / *Event
+;; variant — which can differ from the payload type name
+;; (e.g. `FocusSubscriptionRetraction` variant wraps
+;; `FocusSubscriptionToken` payload).
+;;
+;; `SystemTarget` is a hand-written NotaSum where the variant head IS
+;; the typed payload (`(NiriWindow 223)`), exempt from the derive-
+;; level wrap because the hand-impl is already in case-1 shape.
 ;;
 ;; Round-trip witness: tests/canonical_examples.rs parses each record
 ;; and asserts the re-encoded text equals the canonical form.
@@ -13,41 +19,41 @@
 ;; ─── Requests ─────────────────────────────────────────────────────
 
 ;; SystemRequest::FocusSubscription
-(FocusSubscription (NiriWindow 223))
+(FocusSubscription ((NiriWindow 223)))
 
-;; SystemRequest::FocusSubscriptionRetraction — payload head is the token type
-(FocusSubscriptionToken (NiriWindow 223))
+;; SystemRequest::FocusSubscriptionRetraction
+(FocusSubscriptionRetraction ((NiriWindow 223)))
 
 ;; SystemRequest::FocusSnapshot
-(FocusSnapshot (NiriWindow 223))
+(FocusSnapshot ((NiriWindow 223)))
 
 ;; SystemRequest::SystemStatusQuery
-(SystemStatusQuery Niri)
+(SystemStatusQuery (Niri))
 
 ;; ─── Replies ──────────────────────────────────────────────────────
 
 ;; SystemReply::SubscriptionAccepted
-(SubscriptionAccepted (NiriWindow 223) Focus)
+(SubscriptionAccepted ((NiriWindow 223) Focus))
 
 ;; SystemReply::SubscriptionRetracted — Path A final ack
-(SubscriptionRetracted (FocusSubscriptionToken (NiriWindow 223)))
+(SubscriptionRetracted (((NiriWindow 223))))
 
 ;; SystemReply::ObservationTargetMissing
-(ObservationTargetMissing (NiriWindow 999))
+(ObservationTargetMissing ((NiriWindow 999)))
 
 ;; SystemReply::SystemStatus
-(SystemStatus Niri Running Ready)
+(SystemStatus (Niri Running Ready))
 
 ;; SystemReply::SystemRequestUnimplemented
-(SystemRequestUnimplemented FocusSnapshot NotBuiltYet)
+(SystemRequestUnimplemented (FocusSnapshot NotBuiltYet))
 
-;; SystemReply::FocusSnapshotReply — payload head is FocusObservation
-(FocusObservation (NiriWindow 223) true 12)
+;; SystemReply::FocusSnapshotReply
+(FocusSnapshotReply ((NiriWindow 223) True 12))
 
 ;; ─── Stream events on FocusEventStream ────────────────────────────
 
 ;; SystemEvent::FocusObservation
-(FocusObservation (NiriWindow 223) true 12)
+(FocusObservation ((NiriWindow 223) True 12))
 
 ;; SystemEvent::WindowClosed
-(WindowClosed (NiriWindow 223))
+(WindowClosed ((NiriWindow 223)))
