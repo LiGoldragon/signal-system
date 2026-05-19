@@ -10,6 +10,30 @@ router (request side, opens subscriptions) and the system observer
 (reply / event side, emits focus observations). The router subscribes
 once per target and the system pushes events; the router never polls.
 
+## MUST IMPLEMENT — signal architecture migration
+
+This contract is migrating to contract-local verbs per
+`primary/reports/designer/238-signal-architecture-redirection-contract-local-verbs.md`
+and `primary/reports/designer/239-signal-architecture-migration-plan.md`.
+
+Drop the SignalVerb prefixes. The contract-local verbs are `Watch`
+(for `FocusSubscription` — payload names the target; the public
+action is watching focus), `Unwatch` (for `FocusSubscriptionRetraction`
+— public action is the reverse of watch), `Query` (for `FocusSnapshot`
+and `SystemStatusQuery` — both are reads, payload distinguishes the
+shape). Drop redundant `System*` / `Focus*` prefixes where the crate
+namespace already supplies them. As with harness/terminal/criome,
+the close-stream pair (`Unwatch` + ack reply) needs to remain
+compatible with the Path-A lifecycle discipline once the
+`signal_channel!` macro adopts contract-local close verbs.
+
+References: `primary/reports/designer/238-signal-architecture-redirection-contract-local-verbs.md`,
+`primary/reports/designer/239-signal-architecture-migration-plan.md`.
+
+**Note to remover:** when the refactor lands, remove this section and
+add a `## Migration history — contract-local verbs (2026-05-XX)`
+paragraph noting the shape change.
+
 Subscription close follows the **Path A** discipline per /181 and the
 user-settled lifecycle in `~/primary/reports/designer-assistant/91-user-decisions-after-designer-184-200-critique.md`
 §2: a typed *request*-side `Retract FocusSubscriptionRetraction`
