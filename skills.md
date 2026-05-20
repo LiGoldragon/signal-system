@@ -70,12 +70,11 @@ Subscriptions follow the canonical lifecycle named in
 
 ## Load-bearing invariants
 
-- **Subscription close uses both sides.** The kernel grammar at
-  `signal-core/macros/src/validate.rs:303–331` requires the
-  `stream` block to name a request-side `Retract` variant; the
-  reply-side `SubscriptionRetracted` ack is the final event
-  consumers bind to. Both are present in `src/lib.rs`. Do not
-  remove either.
+- **Subscription close uses both sides.** The kernel grammar in
+  `signal-frame/macros/src/validate.rs` requires the `stream` block
+  to name a request-side `Retract` variant; the reply-side
+  `SubscriptionRetracted` ack is the final event consumers bind to.
+  Both are present in `src/lib.rs`. Do not remove either.
 - **Wire enums are closed.** No `Unknown` variant. Target absence
   is named positively (`ObservationTargetMissing`). Future backends
   add `SystemTarget` and `SystemBackend` variants through
@@ -107,7 +106,7 @@ Subscriptions follow the canonical lifecycle named in
 2. Extend the `SystemTarget` NOTA codec with the new head.
 3. Add round-trip witnesses for the new target through both rkyv
    and NOTA.
-4. Bump `signal-core` consumers; this is a coordinated schema
+4. Bump `signal-frame` consumers; this is a coordinated schema
    change.
 
 ### Adding a new subscription kind
