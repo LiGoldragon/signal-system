@@ -130,7 +130,7 @@ dependencies = [
 [[package]]
 name = "nota-codec"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/nota-codec.git?branch=main#c861cee597180b9ae707b6bac036695d6f926b5a"
+source = "git+https://github.com/LiGoldragon/nota-codec.git?branch=main#538555e895529e2884b7d37d20c66aadc2a49c08"
 dependencies = [
  "camino",
  "nota-derive",
@@ -140,7 +140,7 @@ dependencies = [
 [[package]]
 name = "nota-config"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/nota-config.git?branch=main#d557fbf1dea78e417aa26a3b2858e810a6b6f292"
+source = "git+https://github.com/LiGoldragon/nota-config.git?branch=main#575bcd5ed737abd730888bc504a8ae13cf3f3fd1"
 dependencies = [
  "nota-codec",
  "rkyv",
@@ -340,7 +340,7 @@ dependencies = [
 [[package]]
 name = "signal-sema"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-sema.git?branch=main#22b036a095857b42a81556666e093f03bf4533a1"
+source = "git+https://github.com/LiGoldragon/signal-sema.git?branch=main#9968ffad5e494954a06a4d61721e5df904bc0c67"
 dependencies = [
  "nota-codec",
  "rkyv",
