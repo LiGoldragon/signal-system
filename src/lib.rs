@@ -370,7 +370,7 @@ pub struct SystemDaemonConfiguration {
     /// The compositor/system backend the daemon presents.
     pub backend: SystemBackend,
     /// The engine owner identity passed to the system daemon.
-    pub owner_identity: signal_persona_auth::OwnerIdentity,
+    pub owner_identity: signal_persona_origin::OwnerIdentity,
 }
 
 nota_config::impl_rkyv_configuration!(SystemDaemonConfiguration);

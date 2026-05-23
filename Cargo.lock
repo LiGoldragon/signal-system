@@ -164,6 +164,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
+name = "paste"
+version = "1.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -285,9 +291,10 @@ dependencies = [
 [[package]]
 name = "signal-frame"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#653773b7d4c18d16efd977ada4d280876debefd7"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#8ccaffd69e1027d13abeb98f9635de884f902f32"
 dependencies = [
  "nota-codec",
+ "paste",
  "rkyv",
  "signal-frame-macros",
  "thiserror",
@@ -296,7 +303,7 @@ dependencies = [
 [[package]]
 name = "signal-frame-macros"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#653773b7d4c18d16efd977ada4d280876debefd7"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#8ccaffd69e1027d13abeb98f9635de884f902f32"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -306,19 +313,19 @@ dependencies = [
 [[package]]
 name = "signal-persona"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-persona.git#92b33ad14602700460b63fcdcee95c52a3634c98"
+source = "git+https://github.com/LiGoldragon/signal-persona.git#eaaf681a84fa57b79c0aacfbcdb2647bd3e7408e"
 dependencies = [
  "nota-codec",
  "rkyv",
  "signal-frame",
- "signal-persona-auth",
+ "signal-persona-origin",
  "signal-sema",
 ]
 
 [[package]]
-name = "signal-persona-auth"
+name = "signal-persona-origin"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-persona-auth.git#53aa35c770567dc470da84533bf31280e0f93194"
+source = "git+https://github.com/LiGoldragon/signal-persona-origin.git#2e949ed0064f2c0ecc1c8f6e4bb9eba8300858bb"
 dependencies = [
  "nota-codec",
  "rkyv",
@@ -333,7 +340,7 @@ dependencies = [
  "rkyv",
  "signal-core",
  "signal-persona",
- "signal-persona-auth",
+ "signal-persona-origin",
  "thiserror",
 ]
 
