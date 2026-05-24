@@ -1,15 +1,15 @@
 [package]
-name         = "signal-persona-system"
+name         = "signal-system"
 version      = "0.1.0"
 edition      = "2024"
 rust-version = "1.85"
 license      = "MIT OR Apache-2.0"
-repository   = "https://github.com/LiGoldragon/signal-persona-system"
-description  = "Signal contract — persona-system → persona-router channel for focus observations."
+repository   = "https://github.com/LiGoldragon/signal-system"
+description  = "Signal contract — system → persona-router channel for focus observations."
 publish      = false
 
 [lib]
-name = "signal_persona_system"
+name = "signal_system"
 path = "src/lib.rs"
 
 [dependencies]

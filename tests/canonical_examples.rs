@@ -5,7 +5,7 @@
 //! asserting the re-encoded text equals the canonical form.
 
 use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
-use signal_persona_system::{
+use signal_system::{
     FocusObservation, FocusSnapshot, FocusSubscription, FocusSubscriptionToken,
     ObservationGeneration, ObservationTargetMissing, SubscriptionAccepted, SubscriptionKind,
     SubscriptionRetracted, SystemBackend, SystemEvent, SystemHealth, SystemOperationKind,

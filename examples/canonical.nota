@@ -1,4 +1,4 @@
-;; Canonical NOTA examples for signal-persona-system.
+;; Canonical NOTA examples for signal-system.
 ;;
 ;; One example per request variant, reply variant, and stream event
 ;; variant. Per the three-case PascalCase rule, each data-carrying

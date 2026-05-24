@@ -1,7 +1,7 @@
-# skills — signal-persona-system
+# skills — signal-system
 
 *Per-repo agent guide for the OS-facts subscription contract between
-`persona-system` and `persona-router`.*
+`system` and `persona-router`.*
 
 ---
 
@@ -19,7 +19,7 @@ Before changing code in this repo, read:
 - `~/primary/skills/nix-discipline.md`
 - this repo's `ARCHITECTURE.md`
 - the consumers' `ARCHITECTURE.md` files
-  (`persona-system/`, `persona-router/`).
+  (`system/`, `persona-router/`).
 
 If your change adds a new subscription kind or observation event,
 edit `src/lib.rs` first, then push, then update the consumers.
@@ -28,8 +28,8 @@ edit `src/lib.rs` first, then push, then update the consumers.
 
 ## What this repo is for
 
-`signal-persona-system` is the typed contract between the router
-(request side, opens focus subscriptions) and `persona-system`
+`signal-system` is the typed contract between the router
+(request side, opens focus subscriptions) and `system`
 (reply / event side, emits focus observations on a push stream).
 
 Subscriptions follow the canonical lifecycle named in
@@ -59,11 +59,11 @@ Subscriptions follow the canonical lifecycle named in
 
 ## What this repo does not own
 
-- The Niri adapter (lives in `persona-system`).
+- The Niri adapter (lives in `system`).
 - Terminal prompt cleanliness, input gates, and write-injection
   safety (live in `signal-persona-terminal` and `persona-terminal`).
 - Transport (UDS path, reconnect, timeouts) — per consumer.
-- Subscription lifetime / accounting — that's `persona-system`'s
+- Subscription lifetime / accounting — that's `system`'s
   actor.
 
 ---

@@ -1,4 +1,4 @@
-//! Signal contract — `persona-system` → `persona-router`.
+//! Signal contract — `system` → `persona-router`.
 //!
 //! Read this file as the public interface of the OS-facts
 //! channel. The channel carries:
@@ -17,7 +17,7 @@
 //!   now, no subscription established).
 //! - **Component status query** from the router
 //!   (`Match SystemStatusQuery`).
-//! - **Observation events** from `persona-system` (focus
+//! - **Observation events** from `system` (focus
 //!   changes and target lifecycle) emitted on the
 //!   `FocusEventStream` after a subscription opens.
 //!
@@ -107,7 +107,7 @@ impl NotaDecode for SystemTarget {
 
 // ─── Subscription requests (router → system) ──────────────
 
-/// Monotonic observation counter minted by `persona-system`.
+/// Monotonic observation counter minted by `system`.
 #[derive(
     Archive,
     RkyvSerialize,
@@ -344,14 +344,14 @@ impl SystemRequest {
 
 // ─── Daemon configuration ──────────────────────────────────
 //
-// Typed startup configuration for `persona-system-daemon`. The
+// Typed startup configuration for `system-daemon`. The
 // persona manager writes one of these (NOTA or rkyv) to a state-dir
 // path and passes that path as argv. The daemon decodes through
 // `nota_config::ConfigurationSource::from_argv()?.decode()?` and
 // runs with the resulting record. No environment variables on the
 // production launch path.
 
-/// Startup configuration for `persona-system-daemon`.
+/// Startup configuration for `system-daemon`.
 ///
 /// Replaces the previous positional `<socket>` argv plus
 /// `PERSONA_SOCKET_MODE`, `PERSONA_SUPERVISION_SOCKET_PATH`, and

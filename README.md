@@ -1,6 +1,6 @@
-# signal-persona-system
+# signal-system
 
-The Signal contract between **`persona-system`** (producer
+The Signal contract between **`system`** (producer
 of OS facts) and **`persona-router`** (consumer of focus
 observations).
 
@@ -15,7 +15,7 @@ this channel carries.
 use signal_core::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, RequestPayload, SessionEpoch,
 };
-use signal_persona_system::{
+use signal_system::{
     FocusSubscription, SystemFrame, SystemFrameBody, SystemRequest, SystemTarget,
 };
 
@@ -33,7 +33,7 @@ let frame = SystemFrame::new(SystemFrameBody::Request {
     request: request.into_request(),
 });
 let bytes = frame.encode_length_prefixed()?;
-// send to persona-system's UDS
+// send to system's UDS
 ```
 
 The system replies with `SystemReply::SubscriptionAccepted`

@@ -1,11 +1,11 @@
-# signal-persona-system — architecture
+# signal-system — architecture
 
-*The Signal contract between `persona-system` (producer of OS facts)
+*The Signal contract between `system` (producer of OS facts)
 and `persona-router` (consumer of focus observations).*
 
 ## 0 · TL;DR
 
-`signal-persona-system` carries one bidirectional channel between the
+`signal-system` carries one bidirectional channel between the
 router (request side, opens subscriptions) and the system observer
 (reply / event side, emits focus observations). The router subscribes
 once per target and the system pushes events; the router never polls.
@@ -26,14 +26,14 @@ and `SystemStatusQuery` — both are reads, payload distinguishes the
 shape). Drop redundant `System*` / `Focus*` prefixes where the crate
 namespace already supplies them.
 
-**Mandatory `Tap`/`Untap` for persona components.** Persona-system is
+**Mandatory `Tap`/`Untap` for persona components.** System is
 a persona component, so its observable surface is standardized.
 Add a mandatory `observable { … }` block; the macro injects
 `Tap(ObserverFilter)` / `Untap(SystemObserverSubscriptionToken)`
 verbs for the standardized observer hook. The domain-specific
 `Watch`/`Unwatch` for focus observations coexists without collision.
 
-**Layer 2 — Component Commands (persona-system daemon).** The system
+**Layer 2 — Component Commands (system daemon).** The system
 daemon owns its typed Command enum (e.g.
 `SystemCommand::OpenFocusSubscription`,
 `SystemCommand::CloseFocusSubscription`,
@@ -66,7 +66,7 @@ request retraction and the reply ack exist; the kernel grammar
 (`signal-frame::signal_channel!`) requires the request-side retract
 variant for any declared `stream` block.
 
-> Status: `persona-system` is paused per its own ARCHITECTURE.md
+> Status: `system` is paused per its own ARCHITECTURE.md
 > §0.7. This contract holds the Path A shape; the system unpauses
 > with a real consumer reading `SystemReply::SubscriptionRetracted`
 > to terminate its in-flight `FocusSubscription`.
@@ -76,7 +76,7 @@ variant for any declared `stream` block.
 | Side | Component |
 |---|---|
 | Request side | `persona-router` |
-| Reply / event side | `persona-system` |
+| Reply / event side | `system` |
 
 The router initiates subscriptions via `SystemRequest`; the system
 answers direct requests with `SystemReply` and pushes `SystemEvent`
@@ -127,7 +127,7 @@ The full lifecycle:
 ```mermaid
 sequenceDiagram
     participant Router as persona-router
-    participant System as persona-system
+    participant System as system
 
     Router->>System: SystemRequest::FocusSubscription(target)
     System-->>Router: SystemReply::SubscriptionAccepted{target,kind=Focus}
@@ -241,7 +241,7 @@ is the typed payload, not a wrapper.
 
 `signal_frame::Frame` carries the protocol version. Schema-level
 changes (adding a new subscription kind, observation event variant,
-or `SystemBackend` value) are breaking; coordinate `persona-system`
+or `SystemBackend` value) are breaking; coordinate `system`
 and `persona-router` on the upgrade.
 
 This crate depends on `signal-frame` via a named-branch reference, not
@@ -250,12 +250,12 @@ branch/bookmark once that lane is declared.
 
 ## 9 · Non-ownership
 
-- No Niri adapter — that is `persona-system`.
-- No focus-tracker actor — that is `persona-system`.
+- No Niri adapter — that is `system`.
+- No focus-tracker actor — that is `system`.
 - No terminal prompt-gate logic — that is `persona-terminal` /
   `terminal-cell`.
 - No transport (UDS path, reconnect, timeouts).
-- No subscription accounting — that is `persona-system`'s actor.
+- No subscription accounting — that is `system`'s actor.
 - No runtime implementation of status handling — the contract owns
   only the typed records.
 

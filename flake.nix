@@ -1,5 +1,5 @@
 {
-  description = "signal-persona-system — Signal contract for persona-system → persona-router focus observations";
+  description = "signal-system — Signal contract for system → persona-router focus observations";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -60,7 +60,7 @@
           });
         };
         devShells.default = pkgs.mkShell {
-          name = "signal-persona-system";
+          name = "signal-system";
           packages = [ pkgs.jujutsu pkgs.pkg-config toolchain ];
         };
       });

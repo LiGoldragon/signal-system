@@ -1,5 +1,5 @@
 //! Architectural-truth round-trip tests for the
-//! `signal-persona-system` channel.
+//! `signal-system` channel.
 //!
 //! Per `~/primary/skills/architectural-truth-tests.md`,
 //! each variant of both enums has a witness test that
@@ -11,7 +11,7 @@ use signal_core::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SignalVerb, StreamEventIdentifier, SubReply, SubscriptionTokenInner,
 };
-use signal_persona_system::{
+use signal_system::{
     FocusObservation, FocusSnapshot, FocusSubscription, FocusSubscriptionToken,
     ObservationGeneration, ObservationTargetMissing, SubscriptionAccepted, SubscriptionKind,
     SubscriptionRetracted, SystemBackend, SystemEvent, SystemFrame, SystemFrameBody, SystemHealth,
@@ -501,7 +501,7 @@ fn system_daemon_configuration_round_trips_through_nota_text() {
     use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
     use signal_persona::{SocketMode, WirePath};
     use signal_persona_origin::{OwnerIdentity, UnixUserId};
-    use signal_persona_system::{SystemBackend, SystemDaemonConfiguration};
+    use signal_system::{SystemBackend, SystemDaemonConfiguration};
 
     let configuration = SystemDaemonConfiguration {
         system_socket_path: WirePath::new("/run/persona/X/system.sock"),
@@ -528,7 +528,7 @@ fn system_daemon_configuration_round_trips_through_rkyv() {
     use nota_config::ConfigurationRecord;
     use signal_persona::{SocketMode, WirePath};
     use signal_persona_origin::{OwnerIdentity, UnixUserId};
-    use signal_persona_system::{SystemBackend, SystemDaemonConfiguration};
+    use signal_system::{SystemBackend, SystemDaemonConfiguration};
 
     let configuration = SystemDaemonConfiguration {
         system_socket_path: WirePath::new("/run/persona/X/system.sock"),
