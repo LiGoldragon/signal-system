@@ -1,7 +1,7 @@
 # signal-system
 
 The Signal contract between **`system`** (producer
-of OS facts) and **`persona-router`** (consumer of focus
+of OS facts) and **`router`** (consumer of focus
 observations).
 
 Read `src/lib.rs` for the public interface — three enums
@@ -46,7 +46,7 @@ Sema classification words such as `Subscribe`, `Retract`, and
 `Match` are daemon-side observation labels, not wire roots.
 
 Prompt cleanliness, input gates, and programmatic write safety are terminal
-transport facts. They live in `signal-persona-terminal`, not in this system
+transport facts. They live in `signal-terminal`, not in this system
 contract.
 
 ## See also

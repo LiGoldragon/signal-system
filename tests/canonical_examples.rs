@@ -4,7 +4,7 @@
 //! as a `SystemRequest`, `SystemReply`, or `SystemEvent` and
 //! asserting the re-encoded text equals the canonical form.
 
-use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
+use nota_next::{NotaEncode, NotaSource};
 use signal_system::{
     FocusObservation, FocusSnapshot, FocusSubscription, FocusSubscriptionToken,
     ObservationGeneration, ObservationTargetMissing, SubscriptionAccepted, SubscriptionKind,
@@ -47,13 +47,12 @@ fn canonical_request_examples_round_trip() {
     ];
 
     for (value, canonical_text) in expected {
-        let mut encoder = Encoder::new();
-        value.encode(&mut encoder).expect("encode");
-        let text = encoder.into_string();
+        let text = value.to_nota();
         assert_eq!(text, canonical_text, "encode for {value:?}");
 
-        let mut decoder = Decoder::new(canonical_text);
-        let decoded = SystemRequest::decode(&mut decoder).expect("decode");
+        let decoded = NotaSource::new(canonical_text)
+            .parse::<SystemRequest>()
+            .expect("decode");
         assert_eq!(decoded, value, "decode for {canonical_text}");
 
         assert!(
@@ -109,13 +108,12 @@ fn canonical_reply_examples_round_trip() {
     ];
 
     for (value, canonical_text) in expected {
-        let mut encoder = Encoder::new();
-        value.encode(&mut encoder).expect("encode");
-        let text = encoder.into_string();
+        let text = value.to_nota();
         assert_eq!(text, canonical_text, "encode for {value:?}");
 
-        let mut decoder = Decoder::new(canonical_text);
-        let decoded = SystemReply::decode(&mut decoder).expect("decode");
+        let decoded = NotaSource::new(canonical_text)
+            .parse::<SystemReply>()
+            .expect("decode");
         assert_eq!(decoded, value, "decode for {canonical_text}");
 
         assert!(
@@ -143,13 +141,12 @@ fn canonical_event_examples_round_trip() {
     ];
 
     for (value, canonical_text) in expected {
-        let mut encoder = Encoder::new();
-        value.encode(&mut encoder).expect("encode");
-        let text = encoder.into_string();
+        let text = value.to_nota();
         assert_eq!(text, canonical_text, "encode for {value:?}");
 
-        let mut decoder = Decoder::new(canonical_text);
-        let decoded = SystemEvent::decode(&mut decoder).expect("decode");
+        let decoded = NotaSource::new(canonical_text)
+            .parse::<SystemEvent>()
+            .expect("decode");
         assert_eq!(decoded, value, "decode for {canonical_text}");
 
         assert!(

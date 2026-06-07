@@ -1,4 +1,4 @@
-//! Signal contract — `system` → `persona-router`.
+//! Signal contract - `system` -> `router`.
 //!
 //! Read this file as the public interface of the OS-facts
 //! channel. The channel carries:
@@ -26,13 +26,13 @@
 //! Per `~/primary/skills/push-not-pull.md`, the system
 //! pushes; the router never polls.
 //!
-//! See `ARCHITECTURE.md` for the channel's role and
-//! boundaries; `~/primary/reports/designer/72-harmonized-implementation-plan.md`
-//! §6 for the contract-creation discipline.
+//! See `ARCHITECTURE.md` for the channel's role and boundaries.
 
-use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode, NotaEnum, NotaRecord, NotaTransparent};
+use nota_next::{Block, Delimiter, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
+use signal_engine_management::{SocketMode, WirePath};
 use signal_frame::signal_channel;
+use signal_persona_origin::OwnerIdentity;
 
 // ─── Target identity ──────────────────────────────────────
 
@@ -47,18 +47,7 @@ pub enum SystemTarget {
 }
 
 /// Niri's typed window id (a u64 newtype).
-#[derive(
-    Archive,
-    RkyvSerialize,
-    RkyvDeserialize,
-    NotaTransparent,
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Hash,
-)]
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NiriWindowId(u64);
 
 impl NiriWindowId {
@@ -84,41 +73,38 @@ impl SystemTarget {
 }
 
 impl NotaEncode for SystemTarget {
-    fn encode(&self, encoder: &mut Encoder) -> nota_codec::Result<()> {
+    fn to_nota(&self) -> String {
         match self {
-            Self::NiriWindow(window_id) => {
-                encoder.start_record("NiriWindow")?;
-                window_id.encode(encoder)?;
-                encoder.end_record()
-            }
+            Self::NiriWindow(window_id) => format!("(NiriWindow {})", window_id.to_nota()),
         }
     }
 }
 
 impl NotaDecode for SystemTarget {
-    fn decode(decoder: &mut Decoder<'_>) -> nota_codec::Result<Self> {
-        decoder.expect_record_head("NiriWindow")?;
-        let window_id = NiriWindowId::decode(decoder)?;
-        decoder.expect_record_end()?;
+    fn from_nota_block(block: &Block) -> Result<Self, NotaDecodeError> {
+        let fields =
+            NotaBlock::new(block).expect_children(Delimiter::Parenthesis, "NiriWindow", 2)?;
+        let window_id = NiriWindowId::from_nota_block(&fields[1])?;
         Ok(Self::NiriWindow(window_id))
+    }
+}
+
+impl NotaDecode for NiriWindowId {
+    fn from_nota_block(block: &Block) -> Result<Self, NotaDecodeError> {
+        Ok(Self(NotaBlock::new(block).parse_integer()?))
+    }
+}
+
+impl NotaEncode for NiriWindowId {
+    fn to_nota(&self) -> String {
+        self.0.to_string()
     }
 }
 
 // ─── Subscription requests (router → system) ──────────────
 
 /// Monotonic observation counter minted by `system`.
-#[derive(
-    Archive,
-    RkyvSerialize,
-    RkyvDeserialize,
-    NotaTransparent,
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Hash,
-)]
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ObservationGeneration(u64);
 
 impl ObservationGeneration {
@@ -131,10 +117,24 @@ impl ObservationGeneration {
     }
 }
 
+impl NotaDecode for ObservationGeneration {
+    fn from_nota_block(block: &Block) -> Result<Self, NotaDecodeError> {
+        Ok(Self(NotaBlock::new(block).parse_integer()?))
+    }
+}
+
+impl NotaEncode for ObservationGeneration {
+    fn to_nota(&self) -> String {
+        self.0.to_string()
+    }
+}
+
 /// Subscribe to focus events for `target`. The system
 /// replies with an `Accepted` event and then pushes
 /// `FocusObservation` events whenever focus changes.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct FocusSubscription {
     pub target: SystemTarget,
 }
@@ -144,9 +144,11 @@ pub struct FocusSubscription {
 /// `SubscriptionRetracted` reply so callers can match the ack to the
 /// request they sent. Matches the structural shape of
 /// `<Channel>SubscriptionToken` newtypes per /176 §1 stream-block
-/// grammar (`signal-persona-terminal::TerminalWorkerLifecycleToken` is
-/// the worked example).
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+/// grammar (`signal-terminal::TerminalWorkerLifecycleToken` is the
+/// worked example).
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct FocusSubscriptionToken {
     pub target: SystemTarget,
 }
@@ -154,7 +156,9 @@ pub struct FocusSubscriptionToken {
 /// One-shot: what is the focus state for `target` *right
 /// now*? Reply is a single `FocusObservation` event; no
 /// subscription established.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct FocusSnapshot {
     pub target: SystemTarget,
 }
@@ -164,13 +168,33 @@ pub struct FocusSnapshot {
 /// system daemon can answer one backend without implying every
 /// backend is healthy.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, Copy, PartialEq, Eq,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
 )]
 pub struct SystemStatusQuery {
     pub backend: SystemBackend,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
 pub enum SystemBackend {
     Niri,
 }
@@ -182,7 +206,16 @@ pub enum SystemBackend {
 /// router uses it to discard stale events when subscriptions
 /// race.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, Copy, PartialEq, Eq,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
 )]
 pub struct FocusObservation {
     pub target: SystemTarget,
@@ -204,7 +237,16 @@ impl FocusObservation {
 /// etc.). The system stops emitting events for it; existing
 /// subscriptions on that target are implicitly cancelled.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, Copy, PartialEq, Eq,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
 )]
 pub struct WindowClosed {
     pub target: SystemTarget,
@@ -213,14 +255,34 @@ pub struct WindowClosed {
 /// Subscription was accepted; events of the named kind will
 /// follow.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, Copy, PartialEq, Eq,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
 )]
 pub struct SubscriptionAccepted {
     pub target: SystemTarget,
     pub kind: SubscriptionKind,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
 pub enum SubscriptionKind {
     Focus,
 }
@@ -229,7 +291,16 @@ pub enum SubscriptionKind {
 /// exist (yet, or any more), or the system has no backend
 /// for it.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, Copy, PartialEq, Eq,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
 )]
 pub struct ObservationTargetMissing {
     pub target: SystemTarget,
@@ -238,7 +309,16 @@ pub struct ObservationTargetMissing {
 /// The system daemon's current health and readiness for one
 /// backend.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, Copy, PartialEq, Eq,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
 )]
 pub struct SystemStatus {
     pub backend: SystemBackend,
@@ -246,14 +326,36 @@ pub struct SystemStatus {
     pub readiness: SystemReadiness,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
 pub enum SystemHealth {
     Running,
     Degraded,
     Stopped,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
 pub enum SystemReadiness {
     Ready,
     Starting,
@@ -266,7 +368,9 @@ pub enum SystemReadiness {
 /// request they sent. This is the Path A reply variant per /181;
 /// retraction is a closed reply event signaling the stream is over,
 /// not a request-only fire-and-forget op.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct SubscriptionRetracted {
     pub token: FocusSubscriptionToken,
 }
@@ -274,14 +378,34 @@ pub struct SubscriptionRetracted {
 /// A recognized request reached the system daemon, but that
 /// operation is not implemented by this daemon skeleton yet.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, Copy, PartialEq, Eq,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
 )]
 pub struct SystemRequestUnimplemented {
     pub operation: SystemOperationKind,
     pub reason: SystemUnimplementedReason,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+)]
 pub enum SystemUnimplementedReason {
     NotBuiltYet,
     BackendUnavailable,
@@ -342,20 +466,41 @@ impl SystemRequest {
 /// `PERSONA_SOCKET_MODE`, `PERSONA_SUPERVISION_SOCKET_PATH`, and
 /// `PERSONA_SUPERVISION_SOCKET_MODE` argv/environment-variable
 /// surface.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct SystemDaemonConfiguration {
     /// Where the daemon binds its system Unix socket.
-    pub system_socket_path: signal_persona::WirePath,
+    pub system_socket_path: WirePath,
     /// chmod applied to the system socket after bind.
-    pub system_socket_mode: signal_persona::SocketMode,
+    pub system_socket_mode: SocketMode,
     /// Where the daemon binds its supervision Unix socket.
-    pub supervision_socket_path: signal_persona::WirePath,
+    pub supervision_socket_path: WirePath,
     /// chmod applied to the supervision socket after bind.
-    pub supervision_socket_mode: signal_persona::SocketMode,
+    pub supervision_socket_mode: SocketMode,
     /// The compositor/system backend the daemon presents.
     pub backend: SystemBackend,
     /// The engine owner identity passed to the system daemon.
-    pub owner_identity: signal_persona_origin::OwnerIdentity,
+    pub owner_identity: OwnerIdentity,
 }
 
-nota_config::impl_rkyv_configuration!(SystemDaemonConfiguration);
+impl SystemDaemonConfiguration {
+    pub fn from_rkyv_bytes(bytes: &[u8]) -> Result<Self, SystemDaemonConfigurationArchiveError> {
+        rkyv::from_bytes::<Self, rkyv::rancor::Error>(bytes)
+            .map_err(|_| SystemDaemonConfigurationArchiveError::Decode)
+    }
+
+    pub fn to_rkyv_bytes(&self) -> Result<Vec<u8>, SystemDaemonConfigurationArchiveError> {
+        rkyv::to_bytes::<rkyv::rancor::Error>(self)
+            .map(|bytes| bytes.to_vec())
+            .map_err(|_| SystemDaemonConfigurationArchiveError::Encode)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SystemDaemonConfigurationArchiveError {
+    #[error("failed to encode system daemon configuration archive")]
+    Encode,
+    #[error("failed to decode system daemon configuration archive")]
+    Decode,
+}

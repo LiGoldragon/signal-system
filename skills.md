@@ -1,7 +1,7 @@
 # skills — signal-system
 
 *Per-repo agent guide for the OS-facts subscription contract between
-`system` and `persona-router`.*
+`system` and `router`.*
 
 ## Checkpoint — read before editing
 
@@ -17,7 +17,7 @@ Before changing code in this repo, read:
 - `~/primary/skills/nix-discipline.md`
 - this repo's `ARCHITECTURE.md`
 - the consumers' `ARCHITECTURE.md` files
-  (`system/`, `persona-router/`).
+  (`system/`, `router/`).
 
 If your change adds a new subscription kind or observation event,
 edit `src/lib.rs` first, then push, then update the consumers.
@@ -57,7 +57,7 @@ words are not request roots on this wire.
 
 - The Niri adapter (lives in `system`).
 - Terminal prompt cleanliness, input gates, and write-injection
-  safety (live in `signal-persona-terminal` and `persona-terminal`).
+  safety (live in `signal-terminal` and `terminal`).
 - Transport (UDS path, reconnect, timeouts) — per consumer.
 - Subscription lifetime / accounting — that's `system`'s
   actor.
@@ -126,7 +126,7 @@ head (`NiriWindow 223`) directly.
 - this workspace's `skills/subscription-lifecycle.md`.
 - this workspace's `skills/push-not-pull.md`.
 - this workspace's `skills/architectural-truth-tests.md`.
-- `signal-persona-harness`'s `skills.md`,
-  `signal-persona-terminal`'s `skills.md`, and `signal-criome`'s
+- `signal-harness`'s `skills.md`, `signal-terminal`'s `skills.md`,
+  and `signal-criome`'s
   `skills.md` — sibling contracts using the same Path A subscription
   discipline.

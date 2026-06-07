@@ -6,7 +6,7 @@
 //! proves the macro-emitted type round-trips through a
 //! length-prefixed Frame.
 
-use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
+use nota_next::{NotaDecode, NotaEncode, NotaSource};
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SignalOperationHeads, StreamEventIdentifier, SubReply, SubscriptionTokenInner,
@@ -87,13 +87,12 @@ fn round_trip_nota<T>(value: T, expected: &str)
 where
     T: NotaEncode + NotaDecode + PartialEq + std::fmt::Debug,
 {
-    let mut encoder = Encoder::new();
-    value.encode(&mut encoder).expect("encode nota text");
-    let encoded = encoder.into_string();
+    let encoded = value.to_nota();
     assert_eq!(encoded, expected);
 
-    let mut decoder = Decoder::new(&encoded);
-    let recovered = T::decode(&mut decoder).expect("decode nota text");
+    let recovered = NotaSource::new(&encoded)
+        .parse::<T>()
+        .expect("decode nota text");
     assert_eq!(recovered, value);
 }
 
@@ -219,10 +218,7 @@ fn system_request_variants_declare_contract_local_operation_heads() {
 #[test]
 fn system_operation_kind_round_trips_through_nota_text() {
     round_trip_nota(SystemOperationKind::WatchFocus, "WatchFocus");
-    round_trip_nota(
-        SystemOperationKind::UnwatchFocus,
-        "UnwatchFocus",
-    );
+    round_trip_nota(SystemOperationKind::UnwatchFocus, "UnwatchFocus");
     round_trip_nota(SystemOperationKind::QueryFocus, "QueryFocus");
     round_trip_nota(SystemOperationKind::QueryStatus, "QueryStatus");
 }
@@ -446,7 +442,7 @@ impl DriftScan {
         self.collect_violations("src/lib.rs", forbidden_fragments, &mut violations);
         assert!(
             violations.is_empty(),
-            "terminal prompt-gate records belong to signal-persona-terminal:\n{}",
+            "terminal prompt-gate records belong to signal-terminal:\n{}",
             violations.join("\n")
         );
     }
@@ -469,9 +465,9 @@ impl DriftScan {
 
 #[test]
 fn system_daemon_configuration_round_trips_through_nota_text() {
-    use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
-    use signal_persona::{SocketMode, WirePath};
-    use signal_persona_origin::{OwnerIdentity, UnixUserId};
+    use nota_next::{NotaEncode, NotaSource};
+    use signal_engine_management::{SocketMode, WirePath};
+    use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
     use signal_system::{SystemBackend, SystemDaemonConfiguration};
 
     let configuration = SystemDaemonConfiguration {
@@ -480,25 +476,21 @@ fn system_daemon_configuration_round_trips_through_nota_text() {
         supervision_socket_path: WirePath::new("/run/persona/X/system-supervision.sock"),
         supervision_socket_mode: SocketMode::new(0o600),
         backend: SystemBackend::Niri,
-        owner_identity: OwnerIdentity::UnixUser(UnixUserId::new(1000)),
+        owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
     };
 
-    let mut encoder = Encoder::new();
-    configuration
-        .encode(&mut encoder)
-        .expect("encode configuration");
-    let text = encoder.into_string();
-    let mut decoder = Decoder::new(&text);
-    let recovered = SystemDaemonConfiguration::decode(&mut decoder).expect("decode configuration");
+    let text = configuration.to_nota();
+    let recovered = NotaSource::new(&text)
+        .parse::<SystemDaemonConfiguration>()
+        .expect("decode configuration");
 
     assert_eq!(recovered, configuration);
 }
 
 #[test]
 fn system_daemon_configuration_round_trips_through_rkyv() {
-    use nota_config::ConfigurationRecord;
-    use signal_persona::{SocketMode, WirePath};
-    use signal_persona_origin::{OwnerIdentity, UnixUserId};
+    use signal_engine_management::{SocketMode, WirePath};
+    use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
     use signal_system::{SystemBackend, SystemDaemonConfiguration};
 
     let configuration = SystemDaemonConfiguration {
@@ -507,10 +499,10 @@ fn system_daemon_configuration_round_trips_through_rkyv() {
         supervision_socket_path: WirePath::new("/run/persona/X/system-supervision.sock"),
         supervision_socket_mode: SocketMode::new(0o600),
         backend: SystemBackend::Niri,
-        owner_identity: OwnerIdentity::UnixUser(UnixUserId::new(1000)),
+        owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
     };
 
-    let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&configuration).expect("archive");
+    let bytes = configuration.to_rkyv_bytes().expect("archive");
     let recovered = SystemDaemonConfiguration::from_rkyv_bytes(&bytes).expect("decode rkyv");
     assert_eq!(recovered, configuration);
 }

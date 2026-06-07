@@ -1,5 +1,5 @@
 {
-  description = "signal-system — Signal contract for system → persona-router focus observations";
+  description = "signal-system — Signal contract for system → router focus observations";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";

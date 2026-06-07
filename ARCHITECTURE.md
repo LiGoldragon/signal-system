@@ -1,7 +1,7 @@
 # signal-system — architecture
 
 *The Signal contract between `system` (producer of OS facts)
-and `persona-router` (consumer of focus observations).*
+and `router` (consumer of focus observations).*
 
 ## 0 · TL;DR
 
@@ -29,18 +29,15 @@ daemon owns its typed Command enum (e.g.
 Command projects to a payloadless `SemaOperation` class via
 `ToSemaOperation`.
 
-**Frame layer.** This crate uses `signal-frame`, not `signal-core`.
+**Frame layer.** This crate uses `signal-frame`.
 
-References:
-- `primary/reports/designer/246-v4-bundled-fix-deep-design-with-examples.md`
-- `primary/reports/designer/248-three-layer-changes-for-operators.md`
+Permanent references:
 - `primary/skills/component-triad.md` §"Verbs come in three layers"
 - `primary/skills/contract-repo.md` §"Public contracts use contract-local operation verbs"
 
-Subscription close follows the **Path A** discipline per /181 and the
-user-settled lifecycle in `~/primary/reports/designer-assistant/91-user-decisions-after-designer-184-200-critique.md`
-§2: a typed request-side `UnwatchFocus`
-carries the per-stream token; the system responds with
+Subscription close follows the **Path A** discipline: a typed
+request-side `UnwatchFocus` carries the per-stream token; the system
+responds with
 `SystemReply::SubscriptionRetracted` echoing the token. Both the
 request retraction and the reply ack exist; the kernel grammar
 (`signal-frame::signal_channel!`) requires the stream block to name a
@@ -55,7 +52,7 @@ typed close operation.
 
 | Side | Component |
 |---|---|
-| Request side | `persona-router` |
+| Request side | `router` |
 | Reply / event side | `system` |
 
 The router initiates subscriptions via `SystemRequest`; the system
@@ -81,10 +78,10 @@ Records local to this contract: `SystemTarget`, `NiriWindowId`,
 `SystemOperationKind`.
 
 If a future channel needs `SystemTarget` (e.g. a harness-discovery
-channel), make or update the relation-specific `signal-persona-*`
+channel), make or update the relation-specific `signal-*`
 contract for that relation. Do not lift system-observation payloads
-into `signal-persona`; that crate is the top-level engine-manager
-contract.
+into another component's contract; this crate owns the system
+observation vocabulary.
 
 ## 3 · Messages
 
@@ -106,7 +103,7 @@ The full lifecycle:
 
 ```mermaid
 sequenceDiagram
-    participant Router as persona-router
+    participant Router as router
     participant System as system
 
     Router->>System: SystemRequest::WatchFocus(target)
@@ -219,7 +216,7 @@ is the typed payload, not a wrapper.
 `signal_frame::Frame` carries the protocol version. Schema-level
 changes (adding a new subscription kind, observation event variant,
 or `SystemBackend` value) are breaking; coordinate `system`
-and `persona-router` on the upgrade.
+and `router` on the upgrade.
 
 This crate depends on `signal-frame` via a named-branch reference, not
 a raw revision pin. The destination is a stable `signal-frame` API
@@ -229,7 +226,7 @@ branch/bookmark once that lane is declared.
 
 - No Niri adapter — that is `system`.
 - No focus-tracker actor — that is `system`.
-- No terminal prompt-gate logic — that is `persona-terminal` /
+- No terminal prompt-gate logic — that is `terminal` /
   `terminal-cell`.
 - No transport (UDS path, reconnect, timeouts).
 - No subscription accounting — that is `system`'s actor.
@@ -255,8 +252,8 @@ tests/
 - `signal-frame/macros/src/validate.rs` — the macro and stream-block
   grammar that enforces the request-side retract variant.
 - `~/primary/skills/component-triad.md` §"Verbs come in three layers".
-- `signal-persona-message/ARCHITECTURE.md` — companion channel that
-  the router consumes alongside this one.
-- `signal-persona-terminal/ARCHITECTURE.md` and
-  `signal-criome/ARCHITECTURE.md` — sibling contracts using the same
+- `signal-message/ARCHITECTURE.md` — companion channel that the
+  router consumes alongside this one.
+- `signal-terminal/ARCHITECTURE.md` and `signal-criome/ARCHITECTURE.md`
+  — sibling contracts using the same
   Path A subscription discipline.
