@@ -13,7 +13,7 @@ name = "signal_system"
 path = "src/lib.rs"
 
 [dependencies]
-signal-core         = { git = "https://github.com/LiGoldragon/signal-core.git" }
+signal-frame        = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
 nota-codec          = { git = "https://github.com/LiGoldragon/nota-codec.git", branch = "main" }
 nota-config         = { git = "https://github.com/LiGoldragon/nota-config.git", branch = "main" }
 signal-persona      = { git = "https://github.com/LiGoldragon/signal-persona.git" }

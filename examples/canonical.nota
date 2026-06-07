@@ -6,7 +6,7 @@
 ;; payload is a NotaRecord-derived struct encoded as a tag-less
 ;; `(fields…)`. The outer head names the *Request / *Reply / *Event
 ;; variant — which can differ from the payload type name
-;; (e.g. `FocusSubscriptionRetraction` variant wraps
+;; (e.g. `UnwatchFocus` variant wraps
 ;; `FocusSubscriptionToken` payload).
 ;;
 ;; `SystemTarget` is a hand-written NotaSum where the variant head IS
@@ -18,17 +18,17 @@
 
 ;; ─── Requests ─────────────────────────────────────────────────────
 
-;; SystemRequest::FocusSubscription
-(FocusSubscription ((NiriWindow 223)))
+;; SystemRequest::WatchFocus
+(WatchFocus ((NiriWindow 223)))
 
-;; SystemRequest::FocusSubscriptionRetraction
-(FocusSubscriptionRetraction ((NiriWindow 223)))
+;; SystemRequest::UnwatchFocus
+(UnwatchFocus ((NiriWindow 223)))
 
-;; SystemRequest::FocusSnapshot
-(FocusSnapshot ((NiriWindow 223)))
+;; SystemRequest::QueryFocus
+(QueryFocus ((NiriWindow 223)))
 
-;; SystemRequest::SystemStatusQuery
-(SystemStatusQuery (Niri))
+;; SystemRequest::QueryStatus
+(QueryStatus (Niri))
 
 ;; ─── Replies ──────────────────────────────────────────────────────
 
@@ -45,10 +45,10 @@
 (SystemStatus (Niri Running Ready))
 
 ;; SystemReply::SystemRequestUnimplemented
-(SystemRequestUnimplemented (FocusSnapshot NotBuiltYet))
+(SystemRequestUnimplemented (QueryFocus NotBuiltYet))
 
-;; SystemReply::FocusSnapshotReply
-(FocusSnapshotReply ((NiriWindow 223) True 12))
+;; SystemReply::QueryFocusReply
+(QueryFocusReply ((NiriWindow 223) True 12))
 
 ;; ─── Stream events on FocusEventStream ────────────────────────────
 

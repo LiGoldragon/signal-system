@@ -12,7 +12,7 @@ this channel carries.
 ## Quick reference
 
 ```rust
-use signal_core::{
+use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, RequestPayload, SessionEpoch,
 };
 use signal_system::{
@@ -25,7 +25,7 @@ let exchange = ExchangeIdentifier::new(
     ExchangeLane::Connector,
     LaneSequence::first(),
 );
-let request = SystemRequest::FocusSubscription(FocusSubscription {
+let request = SystemRequest::WatchFocus(FocusSubscription {
     target: SystemTarget::niri_window(223),
 });
 let frame = SystemFrame::new(SystemFrameBody::Request {
@@ -40,8 +40,10 @@ The system replies with `SystemReply::SubscriptionAccepted`
 followed by `SystemEvent::FocusObservation` events whenever
 focus changes for the subscribed target.
 
-`FocusSubscription` uses `Subscribe`; `FocusUnsubscription` uses `Retract`;
-one-shot `FocusSnapshot` and `SystemStatusQuery` requests use `Match`.
+The public operation heads are contract-local:
+`WatchFocus`, `UnwatchFocus`, `QueryFocus`, and `QueryStatus`.
+Sema classification words such as `Subscribe`, `Retract`, and
+`Match` are daemon-side observation labels, not wire roots.
 
 Prompt cleanliness, input gates, and programmatic write safety are terminal
 transport facts. They live in `signal-persona-terminal`, not in this system
@@ -51,5 +53,5 @@ contract.
 
 - `ARCHITECTURE.md` — channel role + boundaries
 - `~/primary/skills/contract-repo.md` — contract-repo discipline
-- `signal-core` — kernel that supplies `Frame`, `Request`,
+- `signal-frame` — kernel that supplies `Frame`, `Request`,
   `Reply`, `signal_channel!`

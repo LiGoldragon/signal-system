@@ -27,22 +27,22 @@ fn token() -> FocusSubscriptionToken {
 fn canonical_request_examples_round_trip() {
     let expected: Vec<(SystemRequest, &str)> = vec![
         (
-            SystemRequest::FocusSubscription(FocusSubscription { target: target() }),
-            "(FocusSubscription ((NiriWindow 223)))",
+            SystemRequest::WatchFocus(FocusSubscription { target: target() }),
+            "(WatchFocus ((NiriWindow 223)))",
         ),
         (
-            SystemRequest::FocusSubscriptionRetraction(token()),
-            "(FocusSubscriptionRetraction ((NiriWindow 223)))",
+            SystemRequest::UnwatchFocus(token()),
+            "(UnwatchFocus ((NiriWindow 223)))",
         ),
         (
-            SystemRequest::FocusSnapshot(FocusSnapshot { target: target() }),
-            "(FocusSnapshot ((NiriWindow 223)))",
+            SystemRequest::QueryFocus(FocusSnapshot { target: target() }),
+            "(QueryFocus ((NiriWindow 223)))",
         ),
         (
-            SystemRequest::SystemStatusQuery(SystemStatusQuery {
+            SystemRequest::QueryStatus(SystemStatusQuery {
                 backend: SystemBackend::Niri,
             }),
-            "(SystemStatusQuery (Niri))",
+            "(QueryStatus (Niri))",
         ),
     ];
 
@@ -93,18 +93,18 @@ fn canonical_reply_examples_round_trip() {
         ),
         (
             SystemReply::SystemRequestUnimplemented(SystemRequestUnimplemented {
-                operation: SystemOperationKind::FocusSnapshot,
+                operation: SystemOperationKind::QueryFocus,
                 reason: SystemUnimplementedReason::NotBuiltYet,
             }),
-            "(SystemRequestUnimplemented (FocusSnapshot NotBuiltYet))",
+            "(SystemRequestUnimplemented (QueryFocus NotBuiltYet))",
         ),
         (
-            SystemReply::FocusSnapshotReply(FocusObservation {
+            SystemReply::QueryFocusReply(FocusObservation {
                 target: target(),
                 focused: true,
                 generation: ObservationGeneration::new(12),
             }),
-            "(FocusSnapshotReply ((NiriWindow 223) True 12))",
+            "(QueryFocusReply ((NiriWindow 223) True 12))",
         ),
     ];
 

@@ -3,20 +3,19 @@
 //! Read this file as the public interface of the OS-facts
 //! channel. The channel carries:
 //!
-//! - **Focus subscription requests** from the router
-//!   (`Subscribe FocusSubscription`).
-//! - **Focus subscription retraction requests** from the
-//!   router (`Retract FocusSubscriptionRetraction` carrying
-//!   a `FocusSubscriptionToken`). Retraction follows the
+//! - **Focus watch requests** from the router
+//!   (`WatchFocus` carrying `FocusSubscription`).
+//! - **Focus unwatch requests** from the router
+//!   (`UnwatchFocus` carrying a `FocusSubscriptionToken`). Close follows the
 //!   **Path A** discipline per /181: the system acks the
-//!   retraction with a typed `SubscriptionRetracted` reply
+//!   close with a typed `SubscriptionRetracted` reply
 //!   carrying the closed token, not a request-only
 //!   fire-and-forget op.
 //! - **One-shot observation requests** from the router
-//!   (`Match FocusSnapshot` — current focus state right
+//!   (`QueryFocus` — current focus state right
 //!   now, no subscription established).
 //! - **Component status query** from the router
-//!   (`Match SystemStatusQuery`).
+//!   (`QueryStatus`).
 //! - **Observation events** from `system` (focus
 //!   changes and target lifecycle) emitted on the
 //!   `FocusEventStream` after a subscription opens.
@@ -33,7 +32,7 @@
 
 use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode, NotaEnum, NotaRecord, NotaTransparent};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use signal_core::signal_channel;
+use signal_frame::signal_channel;
 
 // ─── Target identity ──────────────────────────────────────
 
@@ -176,16 +175,6 @@ pub enum SystemBackend {
     Niri,
 }
 
-#[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
-)]
-pub enum SystemOperationKind {
-    FocusSubscription,
-    FocusSubscriptionRetraction,
-    FocusSnapshot,
-    SystemStatusQuery,
-}
-
 // ─── Observation events (system → router) ─────────────────
 
 /// Focus changed (or current state, for a one-shot `FocusSnapshot`).
@@ -272,7 +261,7 @@ pub enum SystemReadiness {
 }
 
 /// Typed acknowledgement that a focus-event subscription has been
-/// retracted. Returned in reply to a `FocusSubscriptionRetraction` request.
+/// retracted. Returned in reply to an `UnwatchFocus` request.
 /// Carries the retracted token so callers can match the ack to the
 /// request they sent. This is the Path A reply variant per /181;
 /// retraction is a closed reply event signaling the stream is over,
@@ -302,54 +291,50 @@ pub enum SystemUnimplementedReason {
 
 signal_channel! {
     channel System {
-        request SystemRequest {
-            Subscribe FocusSubscription(FocusSubscription) opens FocusEventStream,
-            Retract FocusSubscriptionRetraction(FocusSubscriptionToken),
-            Match FocusSnapshot(FocusSnapshot),
-            Match SystemStatusQuery(SystemStatusQuery),
-        }
-        reply SystemReply {
-            SubscriptionAccepted(SubscriptionAccepted),
-            SubscriptionRetracted(SubscriptionRetracted),
-            ObservationTargetMissing(ObservationTargetMissing),
-            SystemStatus(SystemStatus),
-            SystemRequestUnimplemented(SystemRequestUnimplemented),
-            FocusSnapshotReply(FocusObservation),
-        }
-        event SystemEvent {
-            FocusObservation(FocusObservation) belongs FocusEventStream,
-            WindowClosed(WindowClosed) belongs FocusEventStream,
-        }
-        stream FocusEventStream {
-            token FocusSubscriptionToken;
-            opened SubscriptionAccepted;
-            event FocusObservation;
-            close FocusSubscriptionRetraction;
-        }
+        operation WatchFocus(FocusSubscription) opens FocusEventStream,
+        operation UnwatchFocus(FocusSubscriptionToken),
+        operation QueryFocus(FocusSnapshot),
+        operation QueryStatus(SystemStatusQuery),
+    }
+    reply SystemReply {
+        SubscriptionAccepted(SubscriptionAccepted),
+        SubscriptionRetracted(SubscriptionRetracted),
+        ObservationTargetMissing(ObservationTargetMissing),
+        SystemStatus(SystemStatus),
+        SystemRequestUnimplemented(SystemRequestUnimplemented),
+        QueryFocusReply(FocusObservation),
+    }
+    event SystemEvent {
+        FocusObservation(FocusObservation) belongs FocusEventStream,
+        WindowClosed(WindowClosed) belongs FocusEventStream,
+    }
+    stream FocusEventStream {
+        token FocusSubscriptionToken;
+        opened SubscriptionAccepted;
+        event FocusObservation;
+        close UnwatchFocus;
     }
 }
 
+pub type SystemRequest = Operation;
+pub type SystemFrame = Frame;
+pub type SystemFrameBody = FrameBody;
+pub type SystemReplyEnvelope = ReplyEnvelope;
+pub type SystemRequestBuilder = RequestBuilder;
+pub type SystemOperationKind = OperationKind;
+pub type SystemStreamKind = StreamKind;
+
 impl SystemRequest {
     pub fn operation_kind(&self) -> SystemOperationKind {
-        match self {
-            Self::FocusSubscription(_) => SystemOperationKind::FocusSubscription,
-            Self::FocusSubscriptionRetraction(_) => {
-                SystemOperationKind::FocusSubscriptionRetraction
-            }
-            Self::FocusSnapshot(_) => SystemOperationKind::FocusSnapshot,
-            Self::SystemStatusQuery(_) => SystemOperationKind::SystemStatusQuery,
-        }
+        self.kind()
     }
 }
 
 // ─── Daemon configuration ──────────────────────────────────
 //
-// Typed startup configuration for `system-daemon`. The
-// persona manager writes one of these (NOTA or rkyv) to a state-dir
-// path and passes that path as argv. The daemon decodes through
-// `nota_config::ConfigurationSource::from_argv()?.decode()?` and
-// runs with the resulting record. No environment variables on the
-// production launch path.
+// Typed startup configuration for `system-daemon`. Human tooling may
+// author this record through NOTA, but the live daemon consumes a
+// signal-encoded rkyv archive path. The daemon does not parse NOTA.
 
 /// Startup configuration for `system-daemon`.
 ///

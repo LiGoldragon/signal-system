@@ -10,28 +10,13 @@ router (request side, opens subscriptions) and the system observer
 (reply / event side, emits focus observations). The router subscribes
 once per target and the system pushes events; the router never polls.
 
-## MUST IMPLEMENT — three-layer migration
-
-This contract is migrating to the three-layer model affirmed
-2026-05-20 per
-`primary/reports/designer/246-v4-bundled-fix-deep-design-with-examples.md`
-and `primary/reports/designer/248-three-layer-changes-for-operators.md`.
+## Three-layer model
 
 **Layer 1 — Contract Operations on the wire (this crate).** Drop the
-SignalVerb prefixes entirely. The contract-local verbs are `Watch`
-(for `FocusSubscription` — payload names the target; the public
-action is watching focus), `Unwatch` (for `FocusSubscriptionRetraction`
-— public action is the reverse of watch), `Query` (for `FocusSnapshot`
-and `SystemStatusQuery` — both are reads, payload distinguishes the
-shape). Drop redundant `System*` / `Focus*` prefixes where the crate
-namespace already supplies them.
-
-**Mandatory `Tap`/`Untap` for persona components.** System is
-a persona component, so its observable surface is standardized.
-Add a mandatory `observable { … }` block; the macro injects
-`Tap(ObserverFilter)` / `Untap(SystemObserverSubscriptionToken)`
-verbs for the standardized observer hook. The domain-specific
-`Watch`/`Unwatch` for focus observations coexists without collision.
+Sema-shaped prefixes entirely. The contract-local operation heads are
+`WatchFocus`, `UnwatchFocus`, `QueryFocus`, and `QueryStatus`.
+Payload names stay domain nouns (`FocusSubscription`,
+`FocusSubscriptionToken`, `FocusSnapshot`, `SystemStatusQuery`).
 
 **Layer 2 — Component Commands (system daemon).** The system
 daemon owns its typed Command enum (e.g.
@@ -44,8 +29,7 @@ daemon owns its typed Command enum (e.g.
 Command projects to a payloadless `SemaOperation` class via
 `ToSemaOperation`.
 
-**Frame layer.** The dependency on `signal-core` shifts to
-`signal-frame`.
+**Frame layer.** This crate uses `signal-frame`, not `signal-core`.
 
 References:
 - `primary/reports/designer/246-v4-bundled-fix-deep-design-with-examples.md`
@@ -53,18 +37,14 @@ References:
 - `primary/skills/component-triad.md` §"Verbs come in three layers"
 - `primary/skills/contract-repo.md` §"Public contracts use contract-local operation verbs"
 
-**Note to remover:** when the refactor lands, remove this section and
-add a `## Migration history — three-layer model (2026-05-XX)`
-paragraph noting the shape change.
-
 Subscription close follows the **Path A** discipline per /181 and the
 user-settled lifecycle in `~/primary/reports/designer-assistant/91-user-decisions-after-designer-184-200-critique.md`
-§2: a typed *request*-side `Retract FocusSubscriptionRetraction`
+§2: a typed request-side `UnwatchFocus`
 carries the per-stream token; the system responds with
 `SystemReply::SubscriptionRetracted` echoing the token. Both the
 request retraction and the reply ack exist; the kernel grammar
-(`signal-frame::signal_channel!`) requires the request-side retract
-variant for any declared `stream` block.
+(`signal-frame::signal_channel!`) requires the stream block to name a
+typed close operation.
 
 > Status: `system` is paused per its own ARCHITECTURE.md
 > §0.7. This contract holds the Path A shape; the system unpauses
@@ -110,12 +90,12 @@ contract.
 
 ```text
 SystemRequest                            SystemReply
-├─ FocusSubscription                     ├─ SubscriptionAccepted
-├─ FocusSubscriptionRetraction(token)    ├─ SubscriptionRetracted(token)
-├─ FocusSnapshot                         ├─ ObservationTargetMissing
-└─ SystemStatusQuery                     ├─ SystemStatus
+├─ WatchFocus(FocusSubscription)         ├─ SubscriptionAccepted
+├─ UnwatchFocus(FocusSubscriptionToken)  ├─ SubscriptionRetracted(token)
+├─ QueryFocus(FocusSnapshot)             ├─ ObservationTargetMissing
+└─ QueryStatus(SystemStatusQuery)        ├─ SystemStatus
                                          ├─ SystemRequestUnimplemented
-                                         └─ FocusSnapshotReply
+                                         └─ QueryFocusReply
 
 SystemEvent (on FocusEventStream)
 ├─ FocusObservation
@@ -129,18 +109,18 @@ sequenceDiagram
     participant Router as persona-router
     participant System as system
 
-    Router->>System: SystemRequest::FocusSubscription(target)
+    Router->>System: SystemRequest::WatchFocus(target)
     System-->>Router: SystemReply::SubscriptionAccepted{target,kind=Focus}
     System-->>Router: SystemEvent::FocusObservation{...}
     System-->>Router: SystemEvent::FocusObservation{...}
-    Router->>System: SystemRequest::FocusSubscriptionRetraction(token)
+    Router->>System: SystemRequest::UnwatchFocus(token)
     System-->>Router: SystemReply::SubscriptionRetracted{token}
 ```
 
 The closing exchange — request retract + reply ack — is the **Path A**
 discipline. The retract request is required by the
 `signal_channel!` macro's stream-block grammar: every `stream` block
-names exactly one request-side `Retract` variant as its `close`.
+names exactly one request-side close operation.
 The reply ack is the final event consumers bind their in-flight
 subscribe to. `FocusSubscriptionToken` is the per-stream identity
 (`{ target: SystemTarget }`); the same shape as `FocusSubscription`
@@ -153,12 +133,10 @@ Each contract-local operation's daemon-side Component Command
 projects to a payloadless Sema class label for observation:
 
 ```text
-Watch (FocusSubscription)              -> Subscribe   (opens FocusEventStream)
-Unwatch (FocusSubscriptionRetraction)  -> Retract     (closes FocusEventStream)
-Query (FocusSnapshot)                  -> Match
-Query (SystemStatusQuery)              -> Match
-Tap (mandatory observability)          -> Subscribe
-Untap (mandatory observability)        -> Retract
+WatchFocus (FocusSubscription)          -> Subscribe   (opens FocusEventStream)
+UnwatchFocus (FocusSubscriptionToken)   -> Retract     (closes FocusEventStream)
+QueryFocus (FocusSnapshot)              -> Match
+QueryStatus (SystemStatusQuery)         -> Match
 ```
 
 The wire form carries the contract-local verb only; the Sema class
@@ -198,10 +176,10 @@ SystemUnimplementedReason
   | BackendUnavailable
 
 SystemOperationKind
-  | FocusSubscription
-  | FocusSubscriptionRetraction
-  | FocusSnapshot
-  | SystemStatusQuery
+  | WatchFocus
+  | UnwatchFocus
+  | QueryFocus
+  | QueryStatus
 ```
 
 `SystemTarget` is a closed enum (`NiriWindow(NiriWindowId)`); future
@@ -212,7 +190,7 @@ contract has no `Unknown` variant on any wire enum.
 
 | Constraint | Witness |
 |---|---|
-| Subscription close uses **Path A** — a request-side `Retract`-shaped variant carrying a typed token, plus a reply-side `SubscriptionRetracted` ack echoing the token. | The `signal_channel!` declaration names `Retract FocusSubscriptionRetraction(FocusSubscriptionToken)` and a `stream FocusEventStream { close FocusSubscriptionRetraction; … }` block. The kernel grammar (`signal-frame::macros::validate`) rejects a `stream` block whose `close` is not a request-side `Retract` variant. `focus_subscription_retraction_round_trips` and `subscription_retracted_reply_round_trips` are the wire witnesses. |
+| Subscription close uses **Path A** — a request-side `UnwatchFocus` operation carrying a typed token, plus a reply-side `SubscriptionRetracted` ack echoing the token. | The `signal_channel!` declaration names `operation UnwatchFocus(FocusSubscriptionToken)` and a `stream FocusEventStream { close UnwatchFocus; … }` block. `focus_subscription_retraction_round_trips` and `subscription_retracted_reply_round_trips` are the wire witnesses. |
 | Wire enums contain no `Unknown` variant. | Every closed enum in `src/lib.rs` is exhaustively matched in `tests/round_trip.rs::system_status_enums_are_closed_no_unknown_variants`. |
 | Any record name containing the word `Unknown` represents a positive "entity not in our state" rejection, not a polling-shape escape hatch. | This crate has no such records; absence is named positively (`ObservationTargetMissing`). |
 | Each variant's NOTA head matches the contract-local verb declared in `signal_channel!`. | Generated by the macro; round-trip tests assert each variant's head. Sema classification is daemon-side projection only. |
@@ -220,18 +198,17 @@ contract has no `Unknown` variant on any wire enum.
 | Round-trip witnesses cover every variant in NOTA. | `examples/canonical.nota` holds one canonical text example per request/reply/event variant; round-trip tests parse and re-emit each. |
 | No stringly-typed dispatch (`match s.as_str()`) for closed-set states. | All target / backend / health / readiness / reason fields are typed closed enums. `SystemTarget` carries a hand-written NOTA codec (the variant head IS structural) but does not parse free text. |
 | `SystemStatusQuery` answers with typed `SystemReply::SystemStatus` or `SystemReply::SystemRequestUnimplemented`. | `system_status_query_round_trips_*` and `system_request_unimplemented_round_trips_*`. |
-| The `FocusSubscriptionToken` carried by the retract request matches the token echoed in the `SubscriptionRetracted` reply. | The stream block declaration `token FocusSubscriptionToken; close FocusSubscriptionRetraction` plus `subscription_retracted_reply_carries_request_token` end-to-end test. |
+| The `FocusSubscriptionToken` carried by the unwatch request matches the token echoed in the `SubscriptionRetracted` reply. | The stream block declaration `token FocusSubscriptionToken; close UnwatchFocus` plus the retraction round-trip witnesses. |
 | Contract crate dependencies use a named API reference (branch or tag), not a raw revision pin. | `Cargo.toml` review: `signal-frame` is declared `git = "..."` with a named-branch shape; raw `rev = "..."` pins are not used. |
 | Runtime code stays out of the contract. | Source scan: no Kameo, Tokio, socket, or redb code. |
 
-## 7 · NOTA codec quirk on `signal_channel!` payload heads
+## 7 · NOTA codec shape
 
 The `signal_channel!` macro emits a request variant's NOTA head as
-the **payload's record head**, not the Rust variant name. For
-example, `SystemRequest::FocusSubscriptionRetraction(FocusSubscriptionToken { .. })`
-encodes as `(FocusSubscriptionToken (NiriWindow 223))`, not
-`(FocusSubscriptionRetraction ...)`. Canonical examples and
-round-trip tests carry the payload heads.
+the contract-local operation head. For example,
+`SystemRequest::UnwatchFocus(FocusSubscriptionToken { .. })` encodes
+as `(UnwatchFocus ((NiriWindow 223)))`. Canonical examples and
+round-trip tests carry those operation heads.
 
 `SystemTarget` is the exception: it has a hand-written NOTA codec so
 the text form names the variant head (`NiriWindow 223`) — that head

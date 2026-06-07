@@ -32,7 +32,7 @@ The system channel carries:
   carry.
 - **Replies:** `SubscriptionAccepted`, `SubscriptionRetracted` (echoing
   the token), `SystemStatus`, `ObservationTargetMissing`,
-  `FocusSnapshotReply`, and `SystemRequestUnimplemented` for
+  `QueryFocusReply`, and `SystemRequestUnimplemented` for
   skeleton-honest unbuilt behavior.
 - **Events** (on `FocusEventStream`): `FocusObservation` and
   `WindowClosed`, pushed as focus state changes.
