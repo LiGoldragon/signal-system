@@ -251,17 +251,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
-name = "signal-engine-management"
-version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-engine-management.git?branch=main#305b7031668fed76c43af0d28cf70b94c933089d"
-dependencies = [
- "nota-next",
- "rkyv",
- "signal-frame",
- "signal-persona-origin",
-]
-
-[[package]]
 name = "signal-frame"
 version = "0.2.1"
 source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#8b128d3648935d9d322d5c4985d5b347aaeecddd"
@@ -284,12 +273,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "signal-persona-origin"
+name = "signal-persona"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-persona-origin.git?branch=main#da2bee2e1a178f24a62d1eb5d3985e3937a79b5b"
+source = "git+https://github.com/LiGoldragon/signal-persona.git?branch=main#3d8f7eac1eb0a077d9ccb0d83a409b4a7be0b38c"
 dependencies = [
  "nota-next",
  "rkyv",
+ "signal-frame",
 ]
 
 [[package]]
@@ -298,9 +288,8 @@ version = "0.1.0"
 dependencies = [
  "nota-next",
  "rkyv",
- "signal-engine-management",
  "signal-frame",
- "signal-persona-origin",
+ "signal-persona",
  "thiserror",
 ]
 

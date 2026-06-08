@@ -30,9 +30,9 @@
 
 use nota_next::{Block, Delimiter, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use signal_engine_management::{SocketMode, WirePath};
 use signal_frame::signal_channel;
-use signal_persona_origin::OwnerIdentity;
+use signal_persona::origin::OwnerIdentity;
+use signal_persona::{SocketMode, WirePath};
 
 // ─── Target identity ──────────────────────────────────────
 
