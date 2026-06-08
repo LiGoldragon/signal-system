@@ -82,8 +82,8 @@ and Sema class. Sema classification never appears on the wire.
 
 ## Constraints
 
-- This crate carries only typed wire vocabulary, NOTA codecs, and
-  round-trip witnesses.
+- This crate carries only typed wire vocabulary, explicit NOTA text
+  codecs for CLI/tooling projection, and round-trip witnesses.
 - No runtime code: no actors, no tokio, no socket binding, no redb, no
   Niri adapter or focus-tracker logic.
 - Contract types derive NOTA in this crate. Clients do not carry shadow

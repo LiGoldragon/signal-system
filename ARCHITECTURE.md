@@ -29,7 +29,10 @@ daemon owns its typed Command enum (e.g.
 Command projects to a payloadless `SemaOperation` class via
 `ToSemaOperation`.
 
-**Frame layer.** This crate uses `signal-frame`.
+**Frame layer.** This crate uses `signal-frame`. Because this contract
+still owns NOTA round-trip witnesses, it explicitly enables
+`signal-frame/nota-text` through its own default `nota-text` feature
+instead of relying on text codecs in the frame kernel's default build.
 
 Permanent references:
 - `primary/skills/component-triad.md` §"Verbs come in three layers"
