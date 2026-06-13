@@ -123,8 +123,8 @@ dependencies = [
 
 [[package]]
 name = "nota-next"
-version = "0.3.0"
-source = "git+https://github.com/LiGoldragon/nota-next.git?branch=main#ae5c25cd42b65512be941b274922c9e17bf67176"
+version = "0.4.0"
+source = "git+https://github.com/LiGoldragon/nota-next.git?branch=main#3d6c2cdf4a7a62b36640b8622fdcaa2b931f0d43"
 dependencies = [
  "nota-next-derive",
  "rkyv",
@@ -133,7 +133,7 @@ dependencies = [
 [[package]]
 name = "nota-next-derive"
 version = "0.2.0"
-source = "git+https://github.com/LiGoldragon/nota-next.git?branch=main#ae5c25cd42b65512be941b274922c9e17bf67176"
+source = "git+https://github.com/LiGoldragon/nota-next.git?branch=main#3d6c2cdf4a7a62b36640b8622fdcaa2b931f0d43"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -253,7 +253,7 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "signal-frame"
 version = "0.2.1"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#8b128d3648935d9d322d5c4985d5b347aaeecddd"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#166bda84dc63bf8461fff11a41c43d6a1c92a941"
 dependencies = [
  "nota-next",
  "paste",
@@ -265,7 +265,7 @@ dependencies = [
 [[package]]
 name = "signal-frame-macros"
 version = "0.1.1"
-source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#8b128d3648935d9d322d5c4985d5b347aaeecddd"
+source = "git+https://github.com/LiGoldragon/signal-frame.git?branch=main#166bda84dc63bf8461fff11a41c43d6a1c92a941"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -275,7 +275,7 @@ dependencies = [
 [[package]]
 name = "signal-persona"
 version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-persona.git?branch=main#3d8f7eac1eb0a077d9ccb0d83a409b4a7be0b38c"
+source = "git+https://github.com/LiGoldragon/signal-persona.git?branch=main#ae9cf2629471097dd81e805e704c5da94ba4b16a"
 dependencies = [
  "nota-next",
  "rkyv",
