@@ -6,6 +6,7 @@
 //! proves the macro-emitted type round-trips through a
 //! length-prefixed Frame.
 
+#[cfg(feature = "nota-text")]
 use nota_next::{NotaDecode, NotaEncode, NotaSource};
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
@@ -83,6 +84,7 @@ fn round_trip_event(event: SystemEvent) -> SystemEvent {
     }
 }
 
+#[cfg(feature = "nota-text")]
 fn round_trip_nota<T>(value: T, expected: &str)
 where
     T: NotaEncode + NotaDecode + PartialEq + std::fmt::Debug,
@@ -103,6 +105,7 @@ fn focus_subscription_round_trips() {
     assert_eq!(decoded, request);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn focus_subscription_request_round_trips_through_nota_text() {
     round_trip_nota(
@@ -118,6 +121,7 @@ fn focus_subscription_retraction_round_trips() {
     assert_eq!(decoded, request);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn focus_subscription_retraction_request_round_trips_through_nota_text() {
     round_trip_nota(
@@ -135,6 +139,7 @@ fn subscription_retracted_reply_round_trips() {
     assert_eq!(decoded, reply);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn subscription_retracted_reply_round_trips_through_nota_text() {
     round_trip_nota(
@@ -152,6 +157,7 @@ fn focus_snapshot_round_trips() {
     assert_eq!(decoded, request);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn focus_snapshot_request_round_trips_through_nota_text() {
     round_trip_nota(
@@ -169,6 +175,7 @@ fn system_status_query_round_trips() {
     assert_eq!(decoded, request);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn system_status_query_round_trips_through_nota_text() {
     round_trip_nota(
@@ -215,6 +222,7 @@ fn system_request_variants_declare_contract_local_operation_heads() {
     );
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn system_operation_kind_round_trips_through_nota_text() {
     round_trip_nota(SystemOperationKind::WatchFocus, "WatchFocus");
@@ -245,6 +253,7 @@ fn focus_observation_round_trips_with_focused_false() {
     assert_eq!(decoded, event);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn focus_observation_event_round_trips_through_nota_text() {
     round_trip_nota(
@@ -264,6 +273,7 @@ fn window_closed_round_trips() {
     assert_eq!(decoded, event);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn window_closed_event_round_trips_through_nota_text() {
     round_trip_nota(
@@ -282,6 +292,7 @@ fn subscription_accepted_round_trips_for_focus_kind() {
     assert_eq!(decoded, reply);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn subscription_accepted_reply_round_trips_through_nota_text() {
     round_trip_nota(
@@ -300,6 +311,7 @@ fn observation_target_missing_round_trips() {
     assert_eq!(decoded, reply);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn observation_target_missing_reply_round_trips_through_nota_text() {
     round_trip_nota(
@@ -319,6 +331,7 @@ fn system_status_reply_round_trips() {
     assert_eq!(decoded, reply);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn system_status_reply_round_trips_through_nota_text() {
     round_trip_nota(
@@ -352,6 +365,7 @@ fn focus_snapshot_reply_round_trips() {
     assert_eq!(decoded, reply);
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn focus_snapshot_reply_round_trips_through_nota_text() {
     round_trip_nota(
@@ -364,6 +378,7 @@ fn focus_snapshot_reply_round_trips_through_nota_text() {
     );
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn system_request_unimplemented_reply_round_trips_through_nota_text() {
     round_trip_nota(
@@ -463,6 +478,7 @@ impl DriftScan {
     }
 }
 
+#[cfg(feature = "nota-text")]
 #[test]
 fn system_daemon_configuration_round_trips_through_nota_text() {
     use nota_next::{NotaEncode, NotaSource};

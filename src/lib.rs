@@ -377,18 +377,8 @@ pub struct SubscriptionRetracted {
 
 /// A recognized request reached the system daemon, but that
 /// operation is not implemented by this daemon skeleton yet.
-#[derive(
-    Archive,
-    RkyvSerialize,
-    RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-)]
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "nota-text", derive(NotaEncode, NotaDecode))]
 pub struct SystemRequestUnimplemented {
     pub operation: SystemOperationKind,
     pub reason: SystemUnimplementedReason,
