@@ -482,8 +482,8 @@ impl DriftScan {
 #[test]
 fn system_daemon_configuration_round_trips_through_nota_text() {
     use nota_next::{NotaEncode, NotaSource};
-    use signal_persona::origin::{OwnerIdentity, UnixUserIdentifier};
-    use signal_persona::{SocketMode, WirePath};
+    use signal_persona::{OwnerIdentity, UnixUserIdentifier};
+    use signal_system::{SocketMode, WirePath};
     use signal_system::{SystemBackend, SystemDaemonConfiguration};
 
     let configuration = SystemDaemonConfiguration {
@@ -505,8 +505,8 @@ fn system_daemon_configuration_round_trips_through_nota_text() {
 
 #[test]
 fn system_daemon_configuration_round_trips_through_rkyv() {
-    use signal_persona::origin::{OwnerIdentity, UnixUserIdentifier};
-    use signal_persona::{SocketMode, WirePath};
+    use signal_persona::{OwnerIdentity, UnixUserIdentifier};
+    use signal_system::{SocketMode, WirePath};
     use signal_system::{SystemBackend, SystemDaemonConfiguration};
 
     let configuration = SystemDaemonConfiguration {

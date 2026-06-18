@@ -31,8 +31,101 @@
 use nota_next::{Block, Delimiter, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_frame::signal_channel;
-use signal_persona::origin::OwnerIdentity;
-use signal_persona::{SocketMode, WirePath};
+use signal_persona::OwnerIdentity;
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct WirePath(String);
+
+impl WirePath {
+    pub fn new(payload: impl Into<String>) -> Self {
+        Self(payload.into())
+    }
+
+    pub fn payload(&self) -> &String {
+        &self.0
+    }
+
+    pub fn into_payload(self) -> String {
+        self.0
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.payload().as_str()
+    }
+}
+
+impl From<String> for WirePath {
+    fn from(payload: String) -> Self {
+        Self::new(payload)
+    }
+}
+
+impl std::fmt::Display for WirePath {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.payload().fmt(formatter)
+    }
+}
+
+impl AsRef<str> for WirePath {
+    fn as_ref(&self) -> &str {
+        self.payload().as_str()
+    }
+}
+
+impl PartialEq<&str> for WirePath {
+    fn eq(&self, other: &&str) -> bool {
+        self.payload() == other
+    }
+}
+
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct SocketMode(u64);
+
+impl SocketMode {
+    pub const fn new(payload: u64) -> Self {
+        Self(payload)
+    }
+
+    pub const fn payload(&self) -> &u64 {
+        &self.0
+    }
+
+    pub const fn into_payload(self) -> u64 {
+        self.0
+    }
+
+    pub const fn into_u32(self) -> u32 {
+        self.0 as u32
+    }
+}
+
+impl From<u64> for SocketMode {
+    fn from(payload: u64) -> Self {
+        Self::new(payload)
+    }
+}
+
+impl std::fmt::Display for SocketMode {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.payload().fmt(formatter)
+    }
+}
+
+impl PartialEq<u64> for SocketMode {
+    fn eq(&self, other: &u64) -> bool {
+        self.payload() == other
+    }
+}
+
+impl PartialOrd<u64> for SocketMode {
+    fn partial_cmp(&self, other: &u64) -> Option<std::cmp::Ordering> {
+        self.payload().partial_cmp(other)
+    }
+}
 
 // ─── Target identity ──────────────────────────────────────
 
