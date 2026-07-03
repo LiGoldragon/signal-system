@@ -28,7 +28,7 @@
 //!
 //! See `ARCHITECTURE.md` for the channel's role and boundaries.
 
-use nota_next::{Block, Delimiter, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
+use nota::{Block, Delimiter, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_frame::signal_channel;
 use signal_persona::OwnerIdentity;

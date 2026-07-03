@@ -7,7 +7,7 @@
 //! length-prefixed Frame.
 
 #[cfg(feature = "nota-text")]
-use nota_next::{NotaDecode, NotaEncode, NotaSource};
+use nota::{NotaDecode, NotaEncode, NotaSource};
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SignalOperationHeads, StreamEventIdentifier, SubReply, SubscriptionTokenInner,
@@ -481,7 +481,7 @@ impl DriftScan {
 #[cfg(feature = "nota-text")]
 #[test]
 fn system_daemon_configuration_round_trips_through_nota_text() {
-    use nota_next::{NotaEncode, NotaSource};
+    use nota::{NotaEncode, NotaSource};
     use signal_persona::{OwnerIdentity, UnixUserIdentifier};
     use signal_system::{SocketMode, WirePath};
     use signal_system::{SystemBackend, SystemDaemonConfiguration};
