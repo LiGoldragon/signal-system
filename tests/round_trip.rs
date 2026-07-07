@@ -1,26 +1,19 @@
-//! Architectural-truth round-trip tests for the
-//! `signal-system` channel.
-//!
-//! Per `~/primary/skills/architectural-truth-tests.md`,
-//! each variant of both enums has a witness test that
-//! proves the macro-emitted type round-trips through a
-//! length-prefixed Frame.
+//! Architectural-truth round-trip tests for the `signal-system` channel.
 
-#[cfg(feature = "nota-text")]
-use nota_next::{NotaDecode, NotaEncode, NotaSource};
+use nota::{NotaDecode, NotaEncode, NotaSource};
 use signal_frame::{
-    ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
-    SignalOperationHeads, StreamEventIdentifier, SubReply, SubscriptionTokenInner,
+    ExchangeIdentifier, ExchangeLane, LaneSequence, SignalOperationHeads, StreamEventIdentifier,
+    SubscriptionTokenInner,
 };
 use signal_system::{
-    FocusObservation, FocusSnapshot, FocusSubscription, FocusSubscriptionToken,
-    ObservationGeneration, ObservationTargetMissing, SubscriptionAccepted, SubscriptionKind,
-    SubscriptionRetracted, SystemBackend, SystemEvent, SystemFrame, SystemFrameBody, SystemHealth,
-    SystemOperationKind, SystemReadiness, SystemReply, SystemRequest, SystemRequestUnimplemented,
-    SystemStatus, SystemStatusQuery, SystemTarget, SystemUnimplementedReason, WindowClosed,
+    Backend, FocusObservation, FocusSnapshot, FocusSubscription, FocusSubscriptionToken, Health,
+    Kind, ObservationTargetMissing, Operation, OwnerIdentity, Readiness, Reason, SocketMode,
+    SubscriptionAccepted, SubscriptionKind, SubscriptionRetracted, SystemBackend,
+    SystemDaemonConfiguration, SystemDaemonConfigurationParts, SystemEvent, SystemFrame,
+    SystemFrameBody, SystemHealth, SystemOperationKind, SystemReadiness, SystemReply,
+    SystemRequest, SystemRequestUnimplemented, SystemStatus, SystemStatusQuery, SystemStreamKind,
+    SystemTarget, SystemUnimplementedReason, Target, UnixUserIdentifier, WindowClosed, WirePath,
 };
-
-const TARGET: SystemTarget = SystemTarget::niri_window(223);
 
 fn exchange() -> ExchangeIdentifier {
     ExchangeIdentifier::new(
@@ -30,6 +23,8 @@ fn exchange() -> ExchangeIdentifier {
     )
 }
 
+use signal_frame::SessionEpoch;
+
 fn stream_event() -> StreamEventIdentifier {
     StreamEventIdentifier::new(
         SessionEpoch::new(1),
@@ -38,12 +33,28 @@ fn stream_event() -> StreamEventIdentifier {
     )
 }
 
+fn target() -> SystemTarget {
+    SystemTarget::niri_window(223)
+}
+
+fn target_field() -> Target {
+    Target::new(target())
+}
+
+fn token() -> FocusSubscriptionToken {
+    FocusSubscriptionToken::from_target(target())
+}
+
+fn observation(generation: u64) -> FocusObservation {
+    FocusObservation::new(target(), true, generation)
+}
+
 fn round_trip_request(request: SystemRequest) -> SystemRequest {
-    let frame = SystemFrame::new(SystemFrameBody::Request {
-        exchange: exchange(),
-        request: request.into_request(),
-    });
-    let bytes = frame.encode_length_prefixed().expect("encode");
+    let bytes = request
+        .clone()
+        .into_frame(exchange())
+        .encode_length_prefixed()
+        .expect("encode");
     let decoded = SystemFrame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
         SystemFrameBody::Request { request, .. } => request.payloads().head().clone(),
@@ -52,31 +63,34 @@ fn round_trip_request(request: SystemRequest) -> SystemRequest {
 }
 
 fn round_trip_reply(reply: SystemReply) -> SystemReply {
-    let frame = SystemFrame::new(SystemFrameBody::Reply {
-        exchange: exchange(),
-        reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply))),
-    });
-    let bytes = frame.encode_length_prefixed().expect("encode");
+    let bytes = reply
+        .clone()
+        .into_reply_frame(exchange())
+        .encode_length_prefixed()
+        .expect("encode");
     let decoded = SystemFrame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
         SystemFrameBody::Reply { reply, .. } => match reply {
-            Reply::Accepted { per_operation, .. } => match per_operation.into_head() {
-                SubReply::Ok(payload) => payload,
-                other => panic!("expected Ok sub-reply, got {other:?}"),
-            },
-            Reply::Rejected { reason } => panic!("unexpected rejected reply: {reason:?}"),
+            signal_frame::Reply::Accepted { per_operation, .. } => {
+                match per_operation.into_head() {
+                    signal_frame::SubReply::Ok(payload) => payload,
+                    other => panic!("expected Ok sub-reply, got {other:?}"),
+                }
+            }
+            signal_frame::Reply::Rejected { reason } => {
+                panic!("unexpected rejected reply: {reason:?}")
+            }
         },
         other => panic!("expected reply operation, got {other:?}"),
     }
 }
 
 fn round_trip_event(event: SystemEvent) -> SystemEvent {
-    let frame = SystemFrame::new(SystemFrameBody::SubscriptionEvent {
-        event_identifier: stream_event(),
-        token: SubscriptionTokenInner::new(1),
-        event,
-    });
-    let bytes = frame.encode_length_prefixed().expect("encode");
+    let bytes = event
+        .clone()
+        .into_subscription_frame(stream_event(), SubscriptionTokenInner::new(1))
+        .encode_length_prefixed()
+        .expect("encode");
     let decoded = SystemFrame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
         SystemFrameBody::SubscriptionEvent { event, .. } => event,
@@ -84,7 +98,6 @@ fn round_trip_event(event: SystemEvent) -> SystemEvent {
     }
 }
 
-#[cfg(feature = "nota-text")]
 fn round_trip_nota<T>(value: T, expected: &str)
 where
     T: NotaEncode + NotaDecode + PartialEq + std::fmt::Debug,
@@ -99,118 +112,102 @@ where
 }
 
 #[test]
-fn focus_subscription_round_trips() {
-    let request = SystemRequest::WatchFocus(FocusSubscription { target: TARGET });
-    let decoded = round_trip_request(request.clone());
-    assert_eq!(decoded, request);
-}
+fn every_request_round_trips_through_length_prefixed_frame() {
+    let requests = [
+        SystemRequest::WatchFocus(FocusSubscription::from_target(target())),
+        SystemRequest::UnwatchFocus(token()),
+        SystemRequest::QueryFocus(FocusSnapshot::from_target(target())),
+        SystemRequest::QueryStatus(SystemStatusQuery::from_backend(SystemBackend::Niri)),
+    ];
 
-#[cfg(feature = "nota-text")]
-#[test]
-fn focus_subscription_request_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemRequest::WatchFocus(FocusSubscription { target: TARGET }),
-        "(WatchFocus ((NiriWindow 223)))",
-    );
-}
-
-#[test]
-fn focus_subscription_retraction_round_trips() {
-    let request = SystemRequest::UnwatchFocus(FocusSubscriptionToken { target: TARGET });
-    let decoded = round_trip_request(request.clone());
-    assert_eq!(decoded, request);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn focus_subscription_retraction_request_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemRequest::UnwatchFocus(FocusSubscriptionToken { target: TARGET }),
-        "(UnwatchFocus ((NiriWindow 223)))",
-    );
+    for request in requests {
+        assert_eq!(round_trip_request(request.clone()), request);
+    }
 }
 
 #[test]
-fn subscription_retracted_reply_round_trips() {
-    let reply = SystemReply::SubscriptionRetracted(SubscriptionRetracted {
-        token: FocusSubscriptionToken { target: TARGET },
-    });
-    let decoded = round_trip_reply(reply.clone());
-    assert_eq!(decoded, reply);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn subscription_retracted_reply_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemReply::SubscriptionRetracted(SubscriptionRetracted {
-            token: FocusSubscriptionToken { target: TARGET },
+fn every_reply_round_trips_through_length_prefixed_frame() {
+    let replies = [
+        SystemReply::SubscriptionAccepted(SubscriptionAccepted {
+            target: target_field(),
+            kind: Kind::new(SubscriptionKind::Focus),
         }),
-        "(SubscriptionRetracted (((NiriWindow 223))))",
-    );
-}
-
-#[test]
-fn focus_snapshot_round_trips() {
-    let request = SystemRequest::QueryFocus(FocusSnapshot { target: TARGET });
-    let decoded = round_trip_request(request.clone());
-    assert_eq!(decoded, request);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn focus_snapshot_request_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemRequest::QueryFocus(FocusSnapshot { target: TARGET }),
-        "(QueryFocus ((NiriWindow 223)))",
-    );
-}
-
-#[test]
-fn system_status_query_round_trips() {
-    let request = SystemRequest::QueryStatus(SystemStatusQuery {
-        backend: SystemBackend::Niri,
-    });
-    let decoded = round_trip_request(request.clone());
-    assert_eq!(decoded, request);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn system_status_query_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemRequest::QueryStatus(SystemStatusQuery {
-            backend: SystemBackend::Niri,
+        SystemReply::SubscriptionRetracted(SubscriptionRetracted::from_token(token())),
+        SystemReply::ObservationTargetMissing(ObservationTargetMissing::from_target(target())),
+        SystemReply::SystemStatus(SystemStatus {
+            backend: Backend::new(SystemBackend::Niri),
+            health: Health::new(SystemHealth::Running),
+            readiness: Readiness::new(SystemReadiness::Ready),
         }),
-        "(QueryStatus (Niri))",
+        SystemReply::SystemRequestUnimplemented(SystemRequestUnimplemented::from_parts(
+            SystemOperationKind::WatchFocus,
+            SystemUnimplementedReason::NotBuiltYet,
+        )),
+        SystemReply::QueryFocusReply(observation(44)),
+    ];
+
+    for reply in replies {
+        assert_eq!(round_trip_reply(reply.clone()), reply);
+    }
+}
+
+#[test]
+fn every_event_round_trips_through_length_prefixed_frame() {
+    let events = [
+        SystemEvent::FocusObservation(observation(42)),
+        SystemEvent::WindowClosed(WindowClosed::from_target(target())),
+    ];
+
+    for event in events {
+        assert_eq!(round_trip_event(event.clone()), event);
+        assert_eq!(event.stream_kind(), SystemStreamKind::FocusEventStream);
+    }
+}
+
+#[test]
+fn request_stream_lifecycle_metadata_is_available() {
+    let watch = SystemRequest::WatchFocus(FocusSubscription::from_target(target()));
+    let unwatch = SystemRequest::UnwatchFocus(token());
+    let query = SystemRequest::QueryFocus(FocusSnapshot::from_target(target()));
+
+    assert_eq!(
+        watch.opened_stream(),
+        Some(SystemStreamKind::FocusEventStream)
     );
+    assert_eq!(watch.closed_stream(), None);
+    assert_eq!(unwatch.opened_stream(), None);
+    assert_eq!(
+        unwatch.closed_stream(),
+        Some(SystemStreamKind::FocusEventStream)
+    );
+    assert_eq!(query.opened_stream(), None);
+    assert_eq!(query.closed_stream(), None);
 }
 
 #[test]
 fn system_request_exposes_contract_owned_operation_kind() {
     let cases = [
         (
-            SystemRequest::WatchFocus(FocusSubscription { target: TARGET }),
+            SystemRequest::WatchFocus(FocusSubscription::from_target(target())),
             SystemOperationKind::WatchFocus,
         ),
         (
-            SystemRequest::UnwatchFocus(FocusSubscriptionToken { target: TARGET }),
+            SystemRequest::UnwatchFocus(token()),
             SystemOperationKind::UnwatchFocus,
         ),
         (
-            SystemRequest::QueryFocus(FocusSnapshot { target: TARGET }),
+            SystemRequest::QueryFocus(FocusSnapshot::from_target(target())),
             SystemOperationKind::QueryFocus,
         ),
         (
-            SystemRequest::QueryStatus(SystemStatusQuery {
-                backend: SystemBackend::Niri,
-            }),
+            SystemRequest::QueryStatus(SystemStatusQuery::from_backend(SystemBackend::Niri)),
             SystemOperationKind::QueryStatus,
         ),
     ];
 
     for (request, operation) in cases {
         assert_eq!(request.operation_kind(), operation);
+        assert_eq!(request.kind(), operation);
     }
 }
 
@@ -222,7 +219,72 @@ fn system_request_variants_declare_contract_local_operation_heads() {
     );
 }
 
-#[cfg(feature = "nota-text")]
+#[test]
+fn every_root_round_trips_through_nota_text() {
+    round_trip_nota(
+        SystemRequest::WatchFocus(FocusSubscription::from_target(target())),
+        "(WatchFocus (NiriWindow 223))",
+    );
+    round_trip_nota(
+        SystemRequest::UnwatchFocus(token()),
+        "(UnwatchFocus (NiriWindow 223))",
+    );
+    round_trip_nota(
+        SystemRequest::QueryFocus(FocusSnapshot::from_target(target())),
+        "(QueryFocus (NiriWindow 223))",
+    );
+    round_trip_nota(
+        SystemRequest::QueryStatus(SystemStatusQuery::from_backend(SystemBackend::Niri)),
+        "(QueryStatus Niri)",
+    );
+
+    round_trip_nota(
+        SystemReply::SubscriptionAccepted(SubscriptionAccepted {
+            target: target_field(),
+            kind: Kind::new(SubscriptionKind::Focus),
+        }),
+        "(SubscriptionAccepted ((NiriWindow 223) Focus))",
+    );
+    round_trip_nota(
+        SystemReply::SubscriptionRetracted(SubscriptionRetracted::from_token(token())),
+        "(SubscriptionRetracted (NiriWindow 223))",
+    );
+    round_trip_nota(
+        SystemReply::ObservationTargetMissing(ObservationTargetMissing::from_target(
+            SystemTarget::niri_window(999),
+        )),
+        "(ObservationTargetMissing (NiriWindow 999))",
+    );
+    round_trip_nota(
+        SystemReply::SystemStatus(SystemStatus {
+            backend: Backend::new(SystemBackend::Niri),
+            health: Health::new(SystemHealth::Running),
+            readiness: Readiness::new(SystemReadiness::Ready),
+        }),
+        "(SystemStatus (Niri Running Ready))",
+    );
+    round_trip_nota(
+        SystemReply::SystemRequestUnimplemented(SystemRequestUnimplemented {
+            operation: Operation::new(SystemOperationKind::QueryFocus),
+            reason: Reason::new(SystemUnimplementedReason::NotBuiltYet),
+        }),
+        "(SystemRequestUnimplemented (QueryFocus NotBuiltYet))",
+    );
+    round_trip_nota(
+        SystemReply::QueryFocusReply(observation(12)),
+        "(QueryFocusReply ((NiriWindow 223) True 12))",
+    );
+
+    round_trip_nota(
+        SystemEvent::FocusObservation(observation(12)),
+        "(FocusObservation ((NiriWindow 223) True 12))",
+    );
+    round_trip_nota(
+        SystemEvent::WindowClosed(WindowClosed::from_target(target())),
+        "(WindowClosed (NiriWindow 223))",
+    );
+}
+
 #[test]
 fn system_operation_kind_round_trips_through_nota_text() {
     round_trip_nota(SystemOperationKind::WatchFocus, "WatchFocus");
@@ -232,200 +294,20 @@ fn system_operation_kind_round_trips_through_nota_text() {
 }
 
 #[test]
-fn focus_observation_round_trips_with_focused_true() {
-    let event = SystemEvent::FocusObservation(FocusObservation {
-        target: TARGET,
-        focused: true,
-        generation: ObservationGeneration::new(42),
-    });
-    let decoded = round_trip_event(event.clone());
-    assert_eq!(decoded, event);
-}
+fn generated_field_wrappers_expose_payloads() {
+    let observation = observation(42);
+    assert_eq!(observation.target.system_target(), target());
+    assert!(observation.focused.as_bool());
+    assert_eq!(observation.generation.into_u64(), 42);
 
-#[test]
-fn focus_observation_round_trips_with_focused_false() {
-    let event = SystemEvent::FocusObservation(FocusObservation {
-        target: TARGET,
-        focused: false,
-        generation: ObservationGeneration::new(43),
-    });
-    let decoded = round_trip_event(event.clone());
-    assert_eq!(decoded, event);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn focus_observation_event_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemEvent::FocusObservation(FocusObservation {
-            target: TARGET,
-            focused: true,
-            generation: ObservationGeneration::new(42),
-        }),
-        "(FocusObservation ((NiriWindow 223) True 42))",
-    );
-}
-
-#[test]
-fn window_closed_round_trips() {
-    let event = SystemEvent::WindowClosed(WindowClosed { target: TARGET });
-    let decoded = round_trip_event(event.clone());
-    assert_eq!(decoded, event);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn window_closed_event_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemEvent::WindowClosed(WindowClosed { target: TARGET }),
-        "(WindowClosed ((NiriWindow 223)))",
-    );
-}
-
-#[test]
-fn subscription_accepted_round_trips_for_focus_kind() {
-    let reply = SystemReply::SubscriptionAccepted(SubscriptionAccepted {
-        target: TARGET,
-        kind: SubscriptionKind::Focus,
-    });
-    let decoded = round_trip_reply(reply.clone());
-    assert_eq!(decoded, reply);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn subscription_accepted_reply_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemReply::SubscriptionAccepted(SubscriptionAccepted {
-            target: TARGET,
-            kind: SubscriptionKind::Focus,
-        }),
-        "(SubscriptionAccepted ((NiriWindow 223) Focus))",
-    );
-}
-
-#[test]
-fn observation_target_missing_round_trips() {
-    let reply = SystemReply::ObservationTargetMissing(ObservationTargetMissing { target: TARGET });
-    let decoded = round_trip_reply(reply.clone());
-    assert_eq!(decoded, reply);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn observation_target_missing_reply_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemReply::ObservationTargetMissing(ObservationTargetMissing { target: TARGET }),
-        "(ObservationTargetMissing ((NiriWindow 223)))",
-    );
-}
-
-#[test]
-fn system_status_reply_round_trips() {
-    let reply = SystemReply::SystemStatus(SystemStatus {
-        backend: SystemBackend::Niri,
-        health: SystemHealth::Running,
-        readiness: SystemReadiness::Ready,
-    });
-    let decoded = round_trip_reply(reply.clone());
-    assert_eq!(decoded, reply);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn system_status_reply_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemReply::SystemStatus(SystemStatus {
-            backend: SystemBackend::Niri,
-            health: SystemHealth::Running,
-            readiness: SystemReadiness::Ready,
-        }),
-        "(SystemStatus (Niri Running Ready))",
-    );
-}
-
-#[test]
-fn system_request_unimplemented_reply_round_trips() {
-    let reply = SystemReply::SystemRequestUnimplemented(SystemRequestUnimplemented {
-        operation: SystemOperationKind::WatchFocus,
-        reason: SystemUnimplementedReason::NotBuiltYet,
-    });
-    let decoded = round_trip_reply(reply.clone());
-    assert_eq!(decoded, reply);
-}
-
-#[test]
-fn focus_snapshot_reply_round_trips() {
-    let reply = SystemReply::QueryFocusReply(FocusObservation {
-        target: TARGET,
-        focused: true,
-        generation: ObservationGeneration::new(44),
-    });
-    let decoded = round_trip_reply(reply.clone());
-    assert_eq!(decoded, reply);
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn focus_snapshot_reply_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemReply::QueryFocusReply(FocusObservation {
-            target: TARGET,
-            focused: true,
-            generation: ObservationGeneration::new(44),
-        }),
-        "(QueryFocusReply ((NiriWindow 223) True 44))",
-    );
-}
-
-#[cfg(feature = "nota-text")]
-#[test]
-fn system_request_unimplemented_reply_round_trips_through_nota_text() {
-    round_trip_nota(
-        SystemReply::SystemRequestUnimplemented(SystemRequestUnimplemented {
-            operation: SystemOperationKind::WatchFocus,
-            reason: SystemUnimplementedReason::NotBuiltYet,
-        }),
-        "(SystemRequestUnimplemented (WatchFocus NotBuiltYet))",
-    );
-}
-
-#[test]
-fn explicit_variant_lifts_focus_subscription_into_request() {
-    let payload = FocusSubscription { target: TARGET };
-    let request = SystemRequest::WatchFocus(payload.clone());
-    assert_eq!(request, SystemRequest::WatchFocus(payload));
-}
-
-#[test]
-fn explicit_variant_lifts_system_status_query_into_request() {
-    let payload = SystemStatusQuery {
-        backend: SystemBackend::Niri,
+    let status = SystemStatus {
+        backend: Backend::new(SystemBackend::Niri),
+        health: Health::new(SystemHealth::Running),
+        readiness: Readiness::new(SystemReadiness::Ready),
     };
-    let request = SystemRequest::QueryStatus(payload);
-    assert_eq!(request, SystemRequest::QueryStatus(payload));
-}
-
-#[test]
-fn explicit_variant_lifts_focus_observation_into_event() {
-    let payload = FocusObservation {
-        target: TARGET,
-        focused: true,
-        generation: ObservationGeneration::new(1),
-    };
-    let event = SystemEvent::FocusObservation(payload);
-    assert_eq!(event, SystemEvent::FocusObservation(payload));
-}
-
-#[test]
-fn explicit_variant_lifts_system_status_into_reply() {
-    let payload = SystemStatus {
-        backend: SystemBackend::Niri,
-        health: SystemHealth::Running,
-        readiness: SystemReadiness::Ready,
-    };
-    let reply = SystemReply::SystemStatus(payload);
-    assert_eq!(reply, SystemReply::SystemStatus(payload));
+    assert_eq!(status.backend.system_backend(), SystemBackend::Niri);
+    assert_eq!(status.health.system_health(), SystemHealth::Running);
+    assert_eq!(status.readiness.system_readiness(), SystemReadiness::Ready);
 }
 
 #[test]
@@ -455,6 +337,7 @@ impl DriftScan {
     fn assert_absent(&self, forbidden_fragments: &[&str]) {
         let mut violations = Vec::new();
         self.collect_violations("src/lib.rs", forbidden_fragments, &mut violations);
+        self.collect_violations("schema/lib.schema", forbidden_fragments, &mut violations);
         assert!(
             violations.is_empty(),
             "terminal prompt-gate records belong to signal-terminal:\n{}",
@@ -478,22 +361,16 @@ impl DriftScan {
     }
 }
 
-#[cfg(feature = "nota-text")]
 #[test]
 fn system_daemon_configuration_round_trips_through_nota_text() {
-    use nota_next::{NotaEncode, NotaSource};
-    use signal_persona::{OwnerIdentity, UnixUserIdentifier};
-    use signal_system::{SocketMode, WirePath};
-    use signal_system::{SystemBackend, SystemDaemonConfiguration};
-
-    let configuration = SystemDaemonConfiguration {
+    let configuration = SystemDaemonConfiguration::from(SystemDaemonConfigurationParts {
         system_socket_path: WirePath::new("/run/persona/X/system.sock"),
         system_socket_mode: SocketMode::new(0o600),
         supervision_socket_path: WirePath::new("/run/persona/X/system-supervision.sock"),
         supervision_socket_mode: SocketMode::new(0o600),
         backend: SystemBackend::Niri,
         owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
-    };
+    });
 
     let text = configuration.to_nota();
     let recovered = NotaSource::new(&text)
@@ -501,22 +378,20 @@ fn system_daemon_configuration_round_trips_through_nota_text() {
         .expect("decode configuration");
 
     assert_eq!(recovered, configuration);
+    assert!(text.contains("/run/persona/X/system.sock"));
+    assert!(text.contains("Niri"));
 }
 
 #[test]
 fn system_daemon_configuration_round_trips_through_rkyv() {
-    use signal_persona::{OwnerIdentity, UnixUserIdentifier};
-    use signal_system::{SocketMode, WirePath};
-    use signal_system::{SystemBackend, SystemDaemonConfiguration};
-
-    let configuration = SystemDaemonConfiguration {
+    let configuration = SystemDaemonConfiguration::from(SystemDaemonConfigurationParts {
         system_socket_path: WirePath::new("/run/persona/X/system.sock"),
         system_socket_mode: SocketMode::new(0o600),
         supervision_socket_path: WirePath::new("/run/persona/X/system-supervision.sock"),
         supervision_socket_mode: SocketMode::new(0o600),
         backend: SystemBackend::Niri,
         owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
-    };
+    });
 
     let bytes = configuration.to_rkyv_bytes().expect("archive");
     let recovered = SystemDaemonConfiguration::from_rkyv_bytes(&bytes).expect("decode rkyv");

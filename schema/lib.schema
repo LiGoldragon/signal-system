@@ -1,0 +1,74 @@
+;; signal-system — ordinary working wire contract for system focus observations.
+;; Wire-only: schema-emitted Input/Output/SystemEvent roots + rkyv + optional
+;; NOTA codec on the signal-frame streaming envelope. Runtime observation,
+;; Niri integration, socket binding, and subscription accounting live in the
+;; system daemon.
+
+[(WatchFocus FocusSubscription opens FocusEventStream)
+ (UnwatchFocus FocusSubscriptionToken)
+ (QueryFocus FocusSnapshot)
+ (QueryStatus SystemStatusQuery)]
+[(SubscriptionAccepted SubscriptionAccepted)
+ (SubscriptionRetracted SubscriptionRetracted)
+ (ObservationTargetMissing ObservationTargetMissing)
+ (SystemStatus SystemStatus)
+ (SystemRequestUnimplemented SystemRequestUnimplemented)
+ (QueryFocusReply FocusObservation)
+ (Event SystemEvent)]
+{
+  NiriWindowId Integer
+  ObservationGeneration Integer
+  WirePath String
+  SocketMode Integer
+  UnixUserIdentifier Integer
+  SystemPrincipal String
+
+  Target SystemTarget
+  Focused Boolean
+  Generation ObservationGeneration
+  Backend SystemBackend
+  Kind SubscriptionKind
+  Health SystemHealth
+  Readiness SystemReadiness
+  Token FocusSubscriptionToken
+  Operation SystemOperationKind
+  Reason SystemUnimplementedReason
+  SystemSocketPath WirePath
+  SystemSocketMode SocketMode
+  SupervisionSocketPath WirePath
+  SupervisionSocketMode SocketMode
+
+  SystemTarget [(NiriWindow NiriWindowId)]
+  SystemBackend [Niri]
+  SubscriptionKind [Focus]
+  SystemHealth [Running Degraded Stopped]
+  SystemReadiness [Ready Starting Unavailable]
+  SystemOperationKind [WatchFocus UnwatchFocus QueryFocus QueryStatus]
+  SystemUnimplementedReason [NotBuiltYet BackendUnavailable]
+  OwnerIdentity [(UnixUser UnixUserIdentifier) (System SystemPrincipal)]
+
+  FocusSubscription { Target }
+  FocusSubscriptionToken { Target }
+  FocusSnapshot { Target }
+  SystemStatusQuery { Backend }
+
+  FocusObservation { Target Focused Generation }
+  WindowClosed { Target }
+  SubscriptionAccepted { Target Kind }
+  ObservationTargetMissing { Target }
+  SystemStatus { Backend Health Readiness }
+  SubscriptionRetracted { Token }
+  SystemRequestUnimplemented { Operation Reason }
+
+  SystemEvent [(FocusObservation FocusObservation belongs FocusEventStream) (WindowClosed WindowClosed belongs FocusEventStream)]
+  FocusEventStream (Stream { token.FocusSubscriptionToken opened.SubscriptionAccepted event.SystemEvent close.FocusSubscriptionToken })
+
+  SystemDaemonConfiguration {
+    SystemSocketPath
+    SystemSocketMode
+    SupervisionSocketPath
+    SupervisionSocketMode
+    Backend
+    OwnerIdentity
+  }
+}
