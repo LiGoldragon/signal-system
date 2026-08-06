@@ -79,26 +79,25 @@ words are not request roots on this wire.
 - **No runtime code.** No Kameo, Tokio, socket, redb, or daemon
   glue in this crate.
 - **Round trips cover every variant.** rkyv length-prefixed frame
-  round trips in `tests/round_trip.rs`; canonical NOTA examples in
-  `examples/canonical.nota` with a parser test. The manifest enables
-  the crate-local `nota-text` feature by default and maps it to
-  `signal-frame/nota-text` for those text witnesses.
-- **`SystemTarget` has a hand-written NOTA codec.** The text head
+  round trips in `tests/round_trip.rs`; canonical Dotos examples in
+  `examples/canonical.dotos` with a parser test. The manifest enables
+  the crate-local `dotos-text` feature by default and maps it to
+  `signal-frame/dotos-text` for those text witnesses.
+- **`SystemTarget` has a hand-written Dotos codec.** The text head
   IS the typed payload (`NiriWindow 223`), not a wrapper. When
   adding a backend, add the head-dispatch arm in
-  `NotaDecode for SystemTarget` and the matching encode arm.
-- **Pin upstream contracts via a named API reference.** Cargo deps
-  declare `git = "..."` with a named branch/bookmark, never raw
-  `rev = "..."`.
+  `DotosDecode for SystemTarget` and the matching encode arm.
+- **Pin every Git producer exactly.** Cargo dependencies use immutable
+  `rev = "..."` identities. Moving branches are not build inputs.
 
 ## Editing patterns
 
 ### Adding a new backend (e.g. Hyprland)
 
 1. Add the variant to `SystemTarget` and `SystemBackend`.
-2. Extend the `SystemTarget` NOTA codec with the new head.
+2. Extend the `SystemTarget` Dotos codec with the new head.
 3. Add round-trip witnesses for the new target through both rkyv
-   and NOTA.
+   and Dotos.
 4. Bump `signal-frame` consumers; this is a coordinated schema
    change.
 
@@ -113,12 +112,12 @@ words are not request roots on this wire.
 4. Witness the full subscribe → event → retract → ack → end
    lifecycle.
 
-## NOTA codec quirk
+## Dotos codec quirk
 
-The `signal_channel!` macro emits a request variant's NOTA head as
+The `signal_channel!` macro emits a request variant's Dotos head as
 the contract-local operation head. For example,
 `SystemRequest::UnwatchFocus(FocusSubscriptionToken { .. })` encodes
-as `(UnwatchFocus ((NiriWindow 223)))`. `SystemTarget` is the
+as `(UnwatchFocus {(NiriWindow 223)})`. `SystemTarget` is the
 inner exception with a hand-written codec; it names the target variant
 head (`NiriWindow 223`) directly.
 

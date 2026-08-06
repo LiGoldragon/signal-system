@@ -1,6 +1,6 @@
 [package]
 name         = "signal-system"
-version      = "0.1.0"
+version      = "0.2.0"
 edition      = "2024"
 rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
@@ -13,13 +13,13 @@ name = "signal_system"
 path = "src/lib.rs"
 
 [features]
-default = ["nota-text"]
-nota-text = ["signal-frame/nota-text", "signal-persona/nota-text"]
+default = ["dotos-text"]
+dotos-text = ["signal-frame/dotos-text"]
 
 [dependencies]
-signal-frame        = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
-nota           = { git = "https://github.com/LiGoldragon/nota.git", branch = "main" }
-signal-persona      = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "main" }
+dotos               = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3" }
+signal-frame        = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "8aa0bcaeb29fe9e461a11706a469638d2fd109ac", default-features = false }
+signal-persona      = { git = "https://github.com/LiGoldragon/signal-persona.git", rev = "2802259fb1344495b1ad3b701fe81e0b7f9df9c3", default-features = false, features = ["dotos-text"] }
 rkyv                = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 thiserror           = "2"
 

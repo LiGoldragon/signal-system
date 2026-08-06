@@ -6,11 +6,12 @@
 //! proves the macro-emitted type round-trips through a
 //! length-prefixed Frame.
 
-#[cfg(feature = "nota-text")]
-use nota::{NotaDecode, NotaEncode, NotaSource};
+#[cfg(feature = "dotos-text")]
+use dotos::{DotosDecode, DotosEncode, DotosSource};
 use signal_frame::{
-    ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
-    SignalOperationHeads, StreamEventIdentifier, SubReply, SubscriptionTokenInner,
+    ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, RootCode,
+    SessionEpoch, SignalOperationHeads, StreamEventIdentifier, SubReply, SubscriptionTokenInner,
+    VariantCode, WireRoute,
 };
 use signal_system::{
     FocusObservation, FocusSnapshot, FocusSubscription, FocusSubscriptionToken,
@@ -21,6 +22,7 @@ use signal_system::{
 };
 
 const TARGET: SystemTarget = SystemTarget::niri_window(223);
+const FOCUS_ROUTE: WireRoute = WireRoute::new(RootCode::new(0), VariantCode::new(0));
 
 fn exchange() -> ExchangeIdentifier {
     ExchangeIdentifier::new(
@@ -31,18 +33,19 @@ fn exchange() -> ExchangeIdentifier {
 }
 
 fn stream_event() -> StreamEventIdentifier {
-    StreamEventIdentifier::new(
-        SessionEpoch::new(1),
-        ExchangeLane::Acceptor,
-        LaneSequence::first(),
-    )
+    StreamEventIdentifier::acceptor(SessionEpoch::new(1), LaneSequence::first())
 }
 
 fn round_trip_request(request: SystemRequest) -> SystemRequest {
-    let frame = SystemFrame::new(SystemFrameBody::Request {
-        exchange: exchange(),
-        request: request.into_request(),
-    });
+    let request = request.into_request();
+    let route = request.route().expect("operation route");
+    let frame = SystemFrame::new(
+        route,
+        SystemFrameBody::Request {
+            exchange: exchange(),
+            request,
+        },
+    );
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = SystemFrame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
@@ -52,10 +55,13 @@ fn round_trip_request(request: SystemRequest) -> SystemRequest {
 }
 
 fn round_trip_reply(reply: SystemReply) -> SystemReply {
-    let frame = SystemFrame::new(SystemFrameBody::Reply {
-        exchange: exchange(),
-        reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply))),
-    });
+    let frame = SystemFrame::new(
+        FOCUS_ROUTE,
+        SystemFrameBody::Reply {
+            exchange: exchange(),
+            reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply))),
+        },
+    );
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = SystemFrame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
@@ -71,11 +77,14 @@ fn round_trip_reply(reply: SystemReply) -> SystemReply {
 }
 
 fn round_trip_event(event: SystemEvent) -> SystemEvent {
-    let frame = SystemFrame::new(SystemFrameBody::SubscriptionEvent {
-        event_identifier: stream_event(),
-        token: SubscriptionTokenInner::new(1),
-        event,
-    });
+    let frame = SystemFrame::new(
+        FOCUS_ROUTE,
+        SystemFrameBody::SubscriptionEvent {
+            event_identifier: stream_event(),
+            token: SubscriptionTokenInner::new(1),
+            event,
+        },
+    );
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = SystemFrame::decode_length_prefixed(&bytes).expect("decode");
     match decoded.into_body() {
@@ -84,17 +93,17 @@ fn round_trip_event(event: SystemEvent) -> SystemEvent {
     }
 }
 
-#[cfg(feature = "nota-text")]
-fn round_trip_nota<T>(value: T, expected: &str)
+#[cfg(feature = "dotos-text")]
+fn round_trip_dotos<T>(value: T, expected: &str)
 where
-    T: NotaEncode + NotaDecode + PartialEq + std::fmt::Debug,
+    T: DotosEncode + DotosDecode + PartialEq + std::fmt::Debug,
 {
-    let encoded = value.to_nota();
+    let encoded = value.to_dotos();
     assert_eq!(encoded, expected);
 
-    let recovered = NotaSource::new(&encoded)
+    let recovered = DotosSource::new(&encoded)
         .parse::<T>()
-        .expect("decode nota text");
+        .expect("decode dotos text");
     assert_eq!(recovered, value);
 }
 
@@ -105,12 +114,12 @@ fn focus_subscription_round_trips() {
     assert_eq!(decoded, request);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn focus_subscription_request_round_trips_through_nota_text() {
-    round_trip_nota(
+fn focus_subscription_request_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemRequest::WatchFocus(FocusSubscription { target: TARGET }),
-        "(WatchFocus ((NiriWindow 223)))",
+        "(WatchFocus {(NiriWindow 223)})",
     );
 }
 
@@ -121,12 +130,12 @@ fn focus_subscription_retraction_round_trips() {
     assert_eq!(decoded, request);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn focus_subscription_retraction_request_round_trips_through_nota_text() {
-    round_trip_nota(
+fn focus_subscription_retraction_request_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemRequest::UnwatchFocus(FocusSubscriptionToken { target: TARGET }),
-        "(UnwatchFocus ((NiriWindow 223)))",
+        "(UnwatchFocus {(NiriWindow 223)})",
     );
 }
 
@@ -139,14 +148,14 @@ fn subscription_retracted_reply_round_trips() {
     assert_eq!(decoded, reply);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn subscription_retracted_reply_round_trips_through_nota_text() {
-    round_trip_nota(
+fn subscription_retracted_reply_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemReply::SubscriptionRetracted(SubscriptionRetracted {
             token: FocusSubscriptionToken { target: TARGET },
         }),
-        "(SubscriptionRetracted (((NiriWindow 223))))",
+        "(SubscriptionRetracted {{(NiriWindow 223)}})",
     );
 }
 
@@ -157,12 +166,12 @@ fn focus_snapshot_round_trips() {
     assert_eq!(decoded, request);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn focus_snapshot_request_round_trips_through_nota_text() {
-    round_trip_nota(
+fn focus_snapshot_request_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemRequest::QueryFocus(FocusSnapshot { target: TARGET }),
-        "(QueryFocus ((NiriWindow 223)))",
+        "(QueryFocus {(NiriWindow 223)})",
     );
 }
 
@@ -175,14 +184,14 @@ fn system_status_query_round_trips() {
     assert_eq!(decoded, request);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn system_status_query_round_trips_through_nota_text() {
-    round_trip_nota(
+fn system_status_query_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemRequest::QueryStatus(SystemStatusQuery {
             backend: SystemBackend::Niri,
         }),
-        "(QueryStatus (Niri))",
+        "(QueryStatus {Niri})",
     );
 }
 
@@ -222,13 +231,13 @@ fn system_request_variants_declare_contract_local_operation_heads() {
     );
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn system_operation_kind_round_trips_through_nota_text() {
-    round_trip_nota(SystemOperationKind::WatchFocus, "WatchFocus");
-    round_trip_nota(SystemOperationKind::UnwatchFocus, "UnwatchFocus");
-    round_trip_nota(SystemOperationKind::QueryFocus, "QueryFocus");
-    round_trip_nota(SystemOperationKind::QueryStatus, "QueryStatus");
+fn system_operation_kind_round_trips_through_dotos_text() {
+    round_trip_dotos(SystemOperationKind::WatchFocus, "WatchFocus");
+    round_trip_dotos(SystemOperationKind::UnwatchFocus, "UnwatchFocus");
+    round_trip_dotos(SystemOperationKind::QueryFocus, "QueryFocus");
+    round_trip_dotos(SystemOperationKind::QueryStatus, "QueryStatus");
 }
 
 #[test]
@@ -253,16 +262,16 @@ fn focus_observation_round_trips_with_focused_false() {
     assert_eq!(decoded, event);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn focus_observation_event_round_trips_through_nota_text() {
-    round_trip_nota(
+fn focus_observation_event_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemEvent::FocusObservation(FocusObservation {
             target: TARGET,
             focused: true,
             generation: ObservationGeneration::new(42),
         }),
-        "(FocusObservation ((NiriWindow 223) True 42))",
+        "(FocusObservation {(NiriWindow 223) True 42})",
     );
 }
 
@@ -273,12 +282,12 @@ fn window_closed_round_trips() {
     assert_eq!(decoded, event);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn window_closed_event_round_trips_through_nota_text() {
-    round_trip_nota(
+fn window_closed_event_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemEvent::WindowClosed(WindowClosed { target: TARGET }),
-        "(WindowClosed ((NiriWindow 223)))",
+        "(WindowClosed {(NiriWindow 223)})",
     );
 }
 
@@ -292,15 +301,15 @@ fn subscription_accepted_round_trips_for_focus_kind() {
     assert_eq!(decoded, reply);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn subscription_accepted_reply_round_trips_through_nota_text() {
-    round_trip_nota(
+fn subscription_accepted_reply_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemReply::SubscriptionAccepted(SubscriptionAccepted {
             target: TARGET,
             kind: SubscriptionKind::Focus,
         }),
-        "(SubscriptionAccepted ((NiriWindow 223) Focus))",
+        "(SubscriptionAccepted {(NiriWindow 223) Focus})",
     );
 }
 
@@ -311,12 +320,12 @@ fn observation_target_missing_round_trips() {
     assert_eq!(decoded, reply);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn observation_target_missing_reply_round_trips_through_nota_text() {
-    round_trip_nota(
+fn observation_target_missing_reply_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemReply::ObservationTargetMissing(ObservationTargetMissing { target: TARGET }),
-        "(ObservationTargetMissing ((NiriWindow 223)))",
+        "(ObservationTargetMissing {(NiriWindow 223)})",
     );
 }
 
@@ -331,16 +340,16 @@ fn system_status_reply_round_trips() {
     assert_eq!(decoded, reply);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn system_status_reply_round_trips_through_nota_text() {
-    round_trip_nota(
+fn system_status_reply_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemReply::SystemStatus(SystemStatus {
             backend: SystemBackend::Niri,
             health: SystemHealth::Running,
             readiness: SystemReadiness::Ready,
         }),
-        "(SystemStatus (Niri Running Ready))",
+        "(SystemStatus {Niri Running Ready})",
     );
 }
 
@@ -365,28 +374,28 @@ fn focus_snapshot_reply_round_trips() {
     assert_eq!(decoded, reply);
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn focus_snapshot_reply_round_trips_through_nota_text() {
-    round_trip_nota(
+fn focus_snapshot_reply_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemReply::QueryFocusReply(FocusObservation {
             target: TARGET,
             focused: true,
             generation: ObservationGeneration::new(44),
         }),
-        "(QueryFocusReply ((NiriWindow 223) True 44))",
+        "(QueryFocusReply {(NiriWindow 223) True 44})",
     );
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn system_request_unimplemented_reply_round_trips_through_nota_text() {
-    round_trip_nota(
+fn system_request_unimplemented_reply_round_trips_through_dotos_text() {
+    round_trip_dotos(
         SystemReply::SystemRequestUnimplemented(SystemRequestUnimplemented {
             operation: SystemOperationKind::WatchFocus,
             reason: SystemUnimplementedReason::NotBuiltYet,
         }),
-        "(SystemRequestUnimplemented (WatchFocus NotBuiltYet))",
+        "(SystemRequestUnimplemented {WatchFocus NotBuiltYet})",
     );
 }
 
@@ -478,11 +487,11 @@ impl DriftScan {
     }
 }
 
-#[cfg(feature = "nota-text")]
+#[cfg(feature = "dotos-text")]
 #[test]
-fn system_daemon_configuration_round_trips_through_nota_text() {
-    use nota::{NotaEncode, NotaSource};
-    use signal_persona::{OwnerIdentity, UnixUserIdentifier};
+fn system_daemon_configuration_round_trips_through_dotos_text() {
+    use dotos::{DotosEncode, DotosSource};
+    use signal_persona::schema::lib::{z2VRBs, z2VaTc};
     use signal_system::{SocketMode, WirePath};
     use signal_system::{SystemBackend, SystemDaemonConfiguration};
 
@@ -492,11 +501,11 @@ fn system_daemon_configuration_round_trips_through_nota_text() {
         supervision_socket_path: WirePath::new("/run/persona/X/system-supervision.sock"),
         supervision_socket_mode: SocketMode::new(0o600),
         backend: SystemBackend::Niri,
-        owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
+        owner_identity: z2VRBs::z2VWNV(z2VaTc::new(1000)),
     };
 
-    let text = configuration.to_nota();
-    let recovered = NotaSource::new(&text)
+    let text = configuration.to_dotos();
+    let recovered = DotosSource::new(&text)
         .parse::<SystemDaemonConfiguration>()
         .expect("decode configuration");
 
@@ -505,7 +514,7 @@ fn system_daemon_configuration_round_trips_through_nota_text() {
 
 #[test]
 fn system_daemon_configuration_round_trips_through_rkyv() {
-    use signal_persona::{OwnerIdentity, UnixUserIdentifier};
+    use signal_persona::schema::lib::{z2VRBs, z2VaTc};
     use signal_system::{SocketMode, WirePath};
     use signal_system::{SystemBackend, SystemDaemonConfiguration};
 
@@ -515,7 +524,7 @@ fn system_daemon_configuration_round_trips_through_rkyv() {
         supervision_socket_path: WirePath::new("/run/persona/X/system-supervision.sock"),
         supervision_socket_mode: SocketMode::new(0o600),
         backend: SystemBackend::Niri,
-        owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
+        owner_identity: z2VRBs::z2VWNV(z2VaTc::new(1000)),
     };
 
     let bytes = configuration.to_rkyv_bytes().expect("archive");

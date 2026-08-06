@@ -28,13 +28,13 @@
 //!
 //! See `ARCHITECTURE.md` for the channel's role and boundaries.
 
-use nota::{Block, Delimiter, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
+use dotos::{Block, Delimiter, DotosBlock, DotosDecode, DotosDecodeError, DotosEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use signal_frame::signal_channel;
-use signal_persona::OwnerIdentity;
+use signal_frame::{ContractBinding, ContractId, WireContract, WireRevision, signal_channel};
+use signal_persona::schema::lib::z2VRBs;
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct WirePath(String);
 
@@ -81,7 +81,7 @@ impl PartialEq<&str> for WirePath {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct SocketMode(u64);
 
@@ -165,31 +165,31 @@ impl SystemTarget {
     }
 }
 
-impl NotaEncode for SystemTarget {
-    fn to_nota(&self) -> String {
+impl DotosEncode for SystemTarget {
+    fn to_dotos(&self) -> String {
         match self {
-            Self::NiriWindow(window_id) => format!("(NiriWindow {})", window_id.to_nota()),
+            Self::NiriWindow(window_id) => format!("(NiriWindow {})", window_id.to_dotos()),
         }
     }
 }
 
-impl NotaDecode for SystemTarget {
-    fn from_nota_block(block: &Block) -> Result<Self, NotaDecodeError> {
+impl DotosDecode for SystemTarget {
+    fn from_dotos_block(block: &Block) -> Result<Self, DotosDecodeError> {
         let fields =
-            NotaBlock::new(block).expect_children(Delimiter::Parenthesis, "NiriWindow", 2)?;
-        let window_id = NiriWindowId::from_nota_block(&fields[1])?;
+            DotosBlock::new(block).expect_children(Delimiter::Parenthesis, "NiriWindow", 2)?;
+        let window_id = NiriWindowId::from_dotos_block(&fields[1])?;
         Ok(Self::NiriWindow(window_id))
     }
 }
 
-impl NotaDecode for NiriWindowId {
-    fn from_nota_block(block: &Block) -> Result<Self, NotaDecodeError> {
-        Ok(Self(NotaBlock::new(block).parse_integer()?))
+impl DotosDecode for NiriWindowId {
+    fn from_dotos_block(block: &Block) -> Result<Self, DotosDecodeError> {
+        Ok(Self(DotosBlock::new(block).parse_integer()?))
     }
 }
 
-impl NotaEncode for NiriWindowId {
-    fn to_nota(&self) -> String {
+impl DotosEncode for NiriWindowId {
+    fn to_dotos(&self) -> String {
         self.0.to_string()
     }
 }
@@ -210,14 +210,14 @@ impl ObservationGeneration {
     }
 }
 
-impl NotaDecode for ObservationGeneration {
-    fn from_nota_block(block: &Block) -> Result<Self, NotaDecodeError> {
-        Ok(Self(NotaBlock::new(block).parse_integer()?))
+impl DotosDecode for ObservationGeneration {
+    fn from_dotos_block(block: &Block) -> Result<Self, DotosDecodeError> {
+        Ok(Self(DotosBlock::new(block).parse_integer()?))
     }
 }
 
-impl NotaEncode for ObservationGeneration {
-    fn to_nota(&self) -> String {
+impl DotosEncode for ObservationGeneration {
+    fn to_dotos(&self) -> String {
         self.0.to_string()
     }
 }
@@ -226,7 +226,7 @@ impl NotaEncode for ObservationGeneration {
 /// replies with an `Accepted` event and then pushes
 /// `FocusObservation` events whenever focus changes.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct FocusSubscription {
     pub target: SystemTarget,
@@ -240,7 +240,7 @@ pub struct FocusSubscription {
 /// grammar (`signal-terminal::TerminalWorkerLifecycleToken` is the
 /// worked example).
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct FocusSubscriptionToken {
     pub target: SystemTarget,
@@ -250,7 +250,7 @@ pub struct FocusSubscriptionToken {
 /// now*? Reply is a single `FocusObservation` event; no
 /// subscription established.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct FocusSnapshot {
     pub target: SystemTarget,
@@ -264,8 +264,8 @@ pub struct FocusSnapshot {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -280,8 +280,8 @@ pub struct SystemStatusQuery {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -302,8 +302,8 @@ pub enum SystemBackend {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -333,8 +333,8 @@ impl FocusObservation {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -351,8 +351,8 @@ pub struct WindowClosed {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -368,8 +368,8 @@ pub struct SubscriptionAccepted {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -387,8 +387,8 @@ pub enum SubscriptionKind {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -405,8 +405,8 @@ pub struct ObservationTargetMissing {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -423,8 +423,8 @@ pub struct SystemStatus {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -441,8 +441,8 @@ pub enum SystemHealth {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -462,7 +462,7 @@ pub enum SystemReadiness {
 /// retraction is a closed reply event signaling the stream is over,
 /// not a request-only fire-and-forget op.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct SubscriptionRetracted {
     pub token: FocusSubscriptionToken,
@@ -471,7 +471,7 @@ pub struct SubscriptionRetracted {
 /// A recognized request reached the system daemon, but that
 /// operation is not implemented by this daemon skeleton yet.
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "nota-text", derive(NotaEncode, NotaDecode))]
+#[cfg_attr(feature = "dotos-text", derive(DotosEncode, DotosDecode))]
 pub struct SystemRequestUnimplemented {
     pub operation: SystemOperationKind,
     pub reason: SystemUnimplementedReason,
@@ -481,8 +481,8 @@ pub struct SystemRequestUnimplemented {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -496,8 +496,23 @@ pub enum SystemUnimplementedReason {
 
 // ─── Channel declaration ───────────────────────────────────
 
+pub enum ContractMarker {}
+
+impl WireContract for ContractMarker {
+    const BINDING: ContractBinding = ContractBinding::new(
+        match ContractId::try_new(1) {
+            Ok(value) => value,
+            Err(_) => panic!("contract ID is allocated"),
+        },
+        match WireRevision::try_new(2) {
+            Ok(value) => value,
+            Err(_) => panic!("wire revision is allocated"),
+        },
+    );
+}
+
 signal_channel! {
-    channel System {
+    channel System contract ContractMarker {
         operation WatchFocus(FocusSubscription) opens FocusEventStream,
         operation UnwatchFocus(FocusSubscriptionToken),
         operation QueryFocus(FocusSnapshot),
@@ -540,8 +555,8 @@ impl SystemRequest {
 // ─── Daemon configuration ──────────────────────────────────
 //
 // Typed startup configuration for `system-daemon`. Human tooling may
-// author this record through NOTA, but the live daemon consumes a
-// signal-encoded rkyv archive path. The daemon does not parse NOTA.
+// author this record through Dotos, but the live daemon consumes a
+// signal-encoded rkyv archive path. The daemon does not parse Dotos.
 
 /// Startup configuration for `system-daemon`.
 ///
@@ -550,7 +565,7 @@ impl SystemRequest {
 /// `PERSONA_SUPERVISION_SOCKET_MODE` argv/environment-variable
 /// surface.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct SystemDaemonConfiguration {
     /// Where the daemon binds its system Unix socket.
@@ -564,7 +579,7 @@ pub struct SystemDaemonConfiguration {
     /// The compositor/system backend the daemon presents.
     pub backend: SystemBackend,
     /// The engine owner identity passed to the system daemon.
-    pub owner_identity: OwnerIdentity,
+    pub owner_identity: z2VRBs,
 }
 
 impl SystemDaemonConfiguration {

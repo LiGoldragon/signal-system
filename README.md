@@ -28,10 +28,12 @@ let exchange = ExchangeIdentifier::new(
 let request = SystemRequest::WatchFocus(FocusSubscription {
     target: SystemTarget::niri_window(223),
 });
-let frame = SystemFrame::new(SystemFrameBody::Request {
-    exchange,
-    request: request.into_request(),
-});
+let request = request.into_request();
+let route = request.route().expect("operation route");
+let frame = SystemFrame::new(
+    route,
+    SystemFrameBody::Request { exchange, request },
+);
 let bytes = frame.encode_length_prefixed()?;
 // send to system's UDS
 ```

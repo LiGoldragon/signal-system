@@ -1,17 +1,16 @@
-;; Canonical NOTA examples for signal-system.
+;; Canonical Dotos examples for signal-system.
 ;;
 ;; One example per request variant, reply variant, and stream event
 ;; variant. Per the three-case PascalCase rule, each data-carrying
 ;; enum variant on the wire is `(VariantName <payload>)`; the inner
-;; payload is a NotaRecord-derived struct encoded as a tag-less
-;; `(fields…)`. The outer head names the *Request / *Reply / *Event
+;; payload is a Dotos-derived struct encoded as a `{fields…}` block.
+;; The outer head names the *Request / *Reply / *Event
 ;; variant — which can differ from the payload type name
 ;; (e.g. `UnwatchFocus` variant wraps
 ;; `FocusSubscriptionToken` payload).
 ;;
-;; `SystemTarget` is a hand-written NotaSum where the variant head IS
-;; the typed payload (`(NiriWindow 223)`), exempt from the derive-
-;; level wrap because the hand-impl is already in case-1 shape.
+;; `SystemTarget` has a hand-written Dotos sum codec where the variant
+;; head is the typed payload (`(NiriWindow 223)`).
 ;;
 ;; Round-trip witness: tests/canonical_examples.rs parses each record
 ;; and asserts the re-encoded text equals the canonical form.
@@ -19,41 +18,41 @@
 ;; ─── Requests ─────────────────────────────────────────────────────
 
 ;; SystemRequest::WatchFocus
-(WatchFocus ((NiriWindow 223)))
+(WatchFocus {(NiriWindow 223)})
 
 ;; SystemRequest::UnwatchFocus
-(UnwatchFocus ((NiriWindow 223)))
+(UnwatchFocus {(NiriWindow 223)})
 
 ;; SystemRequest::QueryFocus
-(QueryFocus ((NiriWindow 223)))
+(QueryFocus {(NiriWindow 223)})
 
 ;; SystemRequest::QueryStatus
-(QueryStatus (Niri))
+(QueryStatus {Niri})
 
 ;; ─── Replies ──────────────────────────────────────────────────────
 
 ;; SystemReply::SubscriptionAccepted
-(SubscriptionAccepted ((NiriWindow 223) Focus))
+(SubscriptionAccepted {(NiriWindow 223) Focus})
 
 ;; SystemReply::SubscriptionRetracted — Path A final ack
-(SubscriptionRetracted (((NiriWindow 223))))
+(SubscriptionRetracted {{(NiriWindow 223)}})
 
 ;; SystemReply::ObservationTargetMissing
-(ObservationTargetMissing ((NiriWindow 999)))
+(ObservationTargetMissing {(NiriWindow 999)})
 
 ;; SystemReply::SystemStatus
-(SystemStatus (Niri Running Ready))
+(SystemStatus {Niri Running Ready})
 
 ;; SystemReply::SystemRequestUnimplemented
-(SystemRequestUnimplemented (QueryFocus NotBuiltYet))
+(SystemRequestUnimplemented {QueryFocus NotBuiltYet})
 
 ;; SystemReply::QueryFocusReply
-(QueryFocusReply ((NiriWindow 223) True 12))
+(QueryFocusReply {(NiriWindow 223) True 12})
 
 ;; ─── Stream events on FocusEventStream ────────────────────────────
 
 ;; SystemEvent::FocusObservation
-(FocusObservation ((NiriWindow 223) True 12))
+(FocusObservation {(NiriWindow 223) True 12})
 
 ;; SystemEvent::WindowClosed
-(WindowClosed ((NiriWindow 223)))
+(WindowClosed {(NiriWindow 223)})
