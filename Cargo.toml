@@ -1,29 +1,32 @@
 [package]
-name         = "signal-system"
-version      = "0.2.0"
-edition      = "2024"
+name = "signal-system"
+version = "2.0.0"
+edition = "2024"
 rust-version = "1.89"
-license      = "MIT OR Apache-2.0"
-repository   = "https://github.com/LiGoldragon/signal-system"
-description  = "Signal contract — system → router channel for focus observations."
-publish      = false
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/LiGoldragon/signal-system"
+description = "Signal contract — system → router channel for focus observations."
+publish = false
+build = "build.rs"
 
 [lib]
 name = "signal_system"
 path = "src/lib.rs"
 
 [features]
-default = ["dotos-text"]
-dotos-text = ["signal-frame/dotos-text"]
+default = []
+datom = ["dep:datom-codec", "dep:protos", "meta-signal-system/datom"]
 
 [dependencies]
-dotos               = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3" }
-signal-frame        = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "8aa0bcaeb29fe9e461a11706a469638d2fd109ac", default-features = false }
-signal-persona      = { git = "https://github.com/LiGoldragon/signal-persona.git", rev = "2802259fb1344495b1ad3b701fe81e0b7f9df9c3", default-features = false, features = ["dotos-text"] }
-rkyv                = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-thiserror           = "2"
+meta-signal-system = { git = "https://github.com/LiGoldragon/meta-signal-system.git", rev = "17591d96dd770b7a1c30dc895aa7a26e7534eeb5", default-features = false }
+datom-codec = { git = "https://github.com/LiGoldragon/datom-codec", rev = "627db67f2655efd9f786864009955005fd8ab2ad", optional = true }
+protos = { git = "https://github.com/LiGoldragon/protos", rev = "171b21f65337983ab624b7b906397a4f1f92c5a3", optional = true }
+rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
+
+[build-dependencies]
+ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "de3d9928b156f2e1a92d060b7817af201abfdbef" }
 
 [lints.rust]
 unsafe_code = "forbid"
-unused      = { level = "warn", priority = -1 }
-dead_code   = "warn"
+unused = { level = "warn", priority = -1 }
+dead_code = "warn"

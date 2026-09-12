@@ -1,59 +1,53 @@
 # signal-system
 
-The Signal contract between **`system`** (producer
-of OS facts) and **`router`** (consumer of focus
-observations).
+The Signal contract between **`system`** (producer of OS facts) and
+**`router`** (consumer of focus observations).
 
-Read `src/lib.rs` for the public interface — three enums
-(`SystemRequest`, `SystemReply`, `SystemEvent`) declared via the
-`signal_channel!` macro. The variants ARE the messages
-this channel carries.
+The contract source is `ethos/signal.ethos`. `ethos-zero` generates
+`src/generated/signal.rs` from it; `build.rs` asserts the committed
+generation matches a fresh one, so the ethos file is the single authority
+for the wire. Read `src/lib.rs` for the frame surface and the three wire
+enums the ethos declares: `Query`, `Response`, and `SystemStreamEvent`.
 
 ## Quick reference
 
 ```rust
-use signal_frame::{
-    ExchangeIdentifier, ExchangeLane, LaneSequence, RequestPayload, SessionEpoch,
-};
+use meta_signal_system::SystemBackend;
 use signal_system::{
-    FocusSubscription, SystemFrame, SystemFrameBody, SystemRequest, SystemTarget,
+    ByteViewable, FocusSubscription, Query, Signalizable, SystemStatusQuery, SystemTarget,
 };
 
-// Router subscribes to focus events for a Niri window
-let exchange = ExchangeIdentifier::new(
-    SessionEpoch::new(1),
-    ExchangeLane::Connector,
-    LaneSequence::first(),
-);
-let request = SystemRequest::WatchFocus(FocusSubscription {
-    target: SystemTarget::niri_window(223),
+// Router subscribes to focus events for a Niri window.
+let query = Query::WatchFocus(FocusSubscription {
+    system_target: SystemTarget::NiriWindow(223),
 });
-let request = request.into_request();
-let route = request.route().expect("operation route");
-let frame = SystemFrame::new(
-    route,
-    SystemFrameBody::Request { exchange, request },
-);
-let bytes = frame.encode_length_prefixed()?;
-// send to system's UDS
+let frame = query.signalize().expect("query archives");
+let _bytes = frame.bytes(); // send to system's UDS
+
+// Router asks the system boundary for its readiness.
+let _status = Query::QueryStatus(SystemStatusQuery {
+    system_backend: SystemBackend::Niri,
+});
 ```
 
-The system replies with `SystemReply::SubscriptionAccepted`
-followed by `SystemEvent::FocusObservation` events whenever
-focus changes for the subscribed target.
+The system answers `WatchFocus` with `Response::SubscriptionAccepted` and
+then pushes `SystemStreamEvent::FocusObservation` frames whenever focus
+changes for the subscribed target.
 
-The public operation heads are contract-local:
-`WatchFocus`, `UnwatchFocus`, `QueryFocus`, and `QueryStatus`.
-Sema classification words such as `Subscribe`, `Retract`, and
-`Match` are daemon-side observation labels, not wire roots.
+The public operation heads are contract-local: `WatchFocus`,
+`UnwatchFocus`, `QueryFocus`, and `QueryStatus`.
+
+`SystemBackend` and the daemon's typed startup record
+(`SystemDaemonConfiguration`) belong to the privileged plane and live in
+`meta-signal-system`. This contract imports `SystemBackend` from there; it
+does not declare its own.
 
 Prompt cleanliness, input gates, and programmatic write safety are terminal
-transport facts. They live in `signal-terminal`, not in this system
-contract.
+transport facts. They live in `signal-terminal`, not in this contract.
 
 ## See also
 
 - `ARCHITECTURE.md` — channel role + boundaries
-- `~/primary/skills/contract-repo.md` — contract-repo discipline
-- `signal-frame` — kernel that supplies `Frame`, `Request`,
-  `Reply`, `signal_channel!`
+- `ethos/signal.ethos` — the contract source
+- `examples/canonical.datom` — one canonical Datom line per contract head
+- `meta-signal-system` — the privileged configuration plane for `system`

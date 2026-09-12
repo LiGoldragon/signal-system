@@ -1,0 +1,16 @@
+; Canonical Datom examples for signal-system.
+; Every line is one contract head: a Query, a Response, or a SystemStreamEvent.
+
+WatchFocus.{ NiriWindow.223 }
+UnwatchFocus.{ NiriWindow.223 }
+QueryFocus.{ NiriWindow.223 }
+QueryStatus.{ Niri }
+
+SubscriptionAccepted.{ NiriWindow.223 Focus }
+SubscriptionRetracted.{ { NiriWindow.223 } }
+ObservationTargetMissing.{ NiriWindow.999 }
+SystemStatus.{ Niri Running Ready }
+SystemRequestUnimplemented.{ QueryFocus NotBuiltYet }
+FocusObservation.{ NiriWindow.223 True 12 }
+
+WindowClosed.{ NiriWindow.223 }
