@@ -1,5 +1,36 @@
 # Upgrades
 
+## 4.0.0 — repin to the current producer front, adopt the exchange layer
+
+Repinned to `protos` 0.31.0 (rev `1febca7836bf8d5f5973a302fdd50aa9c84c159b`),
+`datom-codec` 0.31.0 (rev `09e2a9d52bf7f2f11e51d15cb6c3177f72c6c927`),
+`ethos-zero` 10.0.0 (rev `4bf73cae8d4f5a2072c76a11cd2f00aa3fe9f8e3`,
+build-dependency only), `signal` 7.0.0 (rev
+`66e7b153706696c2cfbb2abcf931a5e83aec91af`), and `meta-signal-system` (this
+closure's own new revision — see its changelog). `src/generated/signal.rs`
+was regenerated with the `ethos-zero` 10.0.0 CLI: every generated type gains
+`Eq, Hash` in its derive list (`datom-codec` 0.31.0 gave the public data
+types a `Hash`); no field, no kind and no trait name changed.
+
+`signal` declares `links = "signal"`, which admits exactly one package per
+`links` key in a graph, so `signal` and every one of its consumers in this
+closure had to move together in this one pass — a stale `signal` pin
+anywhere in the graph is a hard cargo resolution failure, not deferred debt.
+
+`datom-codec` 0.31.0 removed every datom kind from `f64`; this contract
+holds no `f64` and no `Decimal` anywhere in its ethos source, so nothing
+here needed conversion.
+
+`datom-codec`'s dependency list now includes `rkyv` (this crate's own
+build-dependency on `ethos-zero` enables `datom-codec/rkyv`, unified into
+the one resolved `datom-codec` package for this platform).
+
+`signal` 7.0.0 adds the exchange layer (contract handshake by source
+digest). This crate now carries the one-line
+`impl signal::Contracted for Query { const CONTRACT_SOURCE: &'static str = ETHOS; }`
+in `src/lib.rs` that the new handshake needs, per
+`flows/f6db8d/reports/exchange-protocol.md` §4 and §9.
+
 ## 3.0.0 — portable Signal frame un-forked, current producer front
 
 `signal-system` no longer declares its own `Signal<T>` frame or its

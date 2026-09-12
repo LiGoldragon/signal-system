@@ -1,6 +1,6 @@
 [package]
 name = "signal-system"
-version = "3.0.0"
+version = "4.0.0"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -18,14 +18,14 @@ default = []
 datom = ["dep:datom-codec", "dep:protos", "meta-signal-system/datom", "signal/datom"]
 
 [dependencies]
-meta-signal-system = { git = "https://github.com/LiGoldragon/meta-signal-system.git", rev = "18e9599ea60701650cc7bd9cb9917a18e4f16830", default-features = false }
-datom-codec = { git = "https://github.com/LiGoldragon/datom-codec", rev = "6dccc76b75918a91d3370a9d4fe88aa7dd567876", optional = true }
-protos = { git = "https://github.com/LiGoldragon/protos", rev = "171b21f65337983ab624b7b906397a4f1f92c5a3", optional = true }
-signal = { git = "https://github.com/LiGoldragon/signal", rev = "7bcb0949cdaa4501651ed519625eba48e283fac0", default-features = false }
+meta-signal-system = { git = "https://github.com/LiGoldragon/meta-signal-system.git", rev = "a0497fa4772195fd8107d7fafda6f4da38702530", default-features = false }
+datom-codec = { git = "https://github.com/LiGoldragon/datom-codec", rev = "09e2a9d52bf7f2f11e51d15cb6c3177f72c6c927", optional = true }
+protos = { git = "https://github.com/LiGoldragon/protos", rev = "1febca7836bf8d5f5973a302fdd50aa9c84c159b", optional = true }
+signal = { git = "https://github.com/LiGoldragon/signal", rev = "66e7b153706696c2cfbb2abcf931a5e83aec91af", default-features = false }
 rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 
 [build-dependencies]
-ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "b232d35e03011161fe7ec9129ad99a9914413348" }
+ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "4bf73cae8d4f5a2072c76a11cd2f00aa3fe9f8e3" }
 
 [lints.rust]
 unsafe_code = "forbid"
