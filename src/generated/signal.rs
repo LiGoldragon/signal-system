@@ -1,6 +1,13 @@
-#![allow(dead_code, non_camel_case_types, non_snake_case)]
+#![allow(
+    dead_code,
+    non_camel_case_types,
+    non_snake_case,
+    clippy::type_complexity
+)]
 #[rustfmt::skip]
-pub type NiriWindowId = i64;
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "datom", derive(datom_codec::Datomizable, datom_codec::Composing))]
+pub struct NiriWindowId(pub i64);
 #[rustfmt::skip]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "datom", derive(datom_codec::Datomizable, datom_codec::Composing))]
@@ -8,9 +15,13 @@ pub enum SystemTarget {
     NiriWindow(NiriWindowId),
 }
 #[rustfmt::skip]
-pub type ObservationGeneration = i64;
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "datom", derive(datom_codec::Datomizable, datom_codec::Composing))]
+pub struct ObservationGeneration(pub i64);
 #[rustfmt::skip]
-pub type Focused = bool;
+#[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "datom", derive(datom_codec::Datomizable, datom_codec::Composing))]
+pub struct Focused(pub bool);
 #[rustfmt::skip]
 #[derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "datom", derive(datom_codec::Datomizable, datom_codec::Composing))]

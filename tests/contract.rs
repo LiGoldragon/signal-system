@@ -1,26 +1,27 @@
 use meta_signal_system::SystemBackend;
 use signal_system::{
     ByteViewable, FocusObservation, FocusSnapshot, FocusSubscription, FocusSubscriptionToken,
-    ObservationTargetMissing, Query, Response, Restorable, Signal, Signalizable,
-    SubscriptionAccepted, SubscriptionKind, SubscriptionRetracted, SystemHealth,
-    SystemOperationKind, SystemReadiness, SystemRequestUnimplemented, SystemStatus,
-    SystemStatusQuery, SystemStreamEvent, SystemTarget, SystemUnimplementedReason, WindowClosed,
+    Focused, NiriWindowId, ObservationGeneration, ObservationTargetMissing, Query, Response,
+    Restorable, Signal, Signalizable, SubscriptionAccepted, SubscriptionKind,
+    SubscriptionRetracted, SystemHealth, SystemOperationKind, SystemReadiness,
+    SystemRequestUnimplemented, SystemStatus, SystemStatusQuery, SystemStreamEvent, SystemTarget,
+    SystemUnimplementedReason, WindowClosed,
 };
 
 fn token() -> FocusSubscriptionToken {
     FocusSubscriptionToken {
-        system_target: SystemTarget::NiriWindow(223),
+        system_target: SystemTarget::NiriWindow(NiriWindowId(223)),
     }
 }
 
 fn queries() -> Vec<Query> {
     vec![
         Query::WatchFocus(FocusSubscription {
-            system_target: SystemTarget::NiriWindow(223),
+            system_target: SystemTarget::NiriWindow(NiriWindowId(223)),
         }),
         Query::UnwatchFocus(token()),
         Query::QueryFocus(FocusSnapshot {
-            system_target: SystemTarget::NiriWindow(223),
+            system_target: SystemTarget::NiriWindow(NiriWindowId(223)),
         }),
         Query::QueryStatus(SystemStatusQuery {
             system_backend: SystemBackend::Niri,
@@ -31,14 +32,14 @@ fn queries() -> Vec<Query> {
 fn responses() -> Vec<Response> {
     vec![
         Response::SubscriptionAccepted(SubscriptionAccepted {
-            system_target: SystemTarget::NiriWindow(223),
+            system_target: SystemTarget::NiriWindow(NiriWindowId(223)),
             subscription_kind: SubscriptionKind::Focus,
         }),
         Response::SubscriptionRetracted(SubscriptionRetracted {
             focus_subscription_token: token(),
         }),
         Response::ObservationTargetMissing(ObservationTargetMissing {
-            system_target: SystemTarget::NiriWindow(999),
+            system_target: SystemTarget::NiriWindow(NiriWindowId(999)),
         }),
         Response::SystemStatus(SystemStatus {
             system_backend: SystemBackend::Niri,
@@ -50,9 +51,9 @@ fn responses() -> Vec<Response> {
             system_unimplemented_reason: SystemUnimplementedReason::NotBuiltYet,
         }),
         Response::FocusObservation(FocusObservation {
-            system_target: SystemTarget::NiriWindow(223),
-            focused: true,
-            observation_generation: 12,
+            system_target: SystemTarget::NiriWindow(NiriWindowId(223)),
+            focused: Focused(true),
+            observation_generation: ObservationGeneration(12),
         }),
     ]
 }
@@ -60,12 +61,12 @@ fn responses() -> Vec<Response> {
 fn stream_events() -> Vec<SystemStreamEvent> {
     vec![
         SystemStreamEvent::FocusObservation(FocusObservation {
-            system_target: SystemTarget::NiriWindow(223),
-            focused: true,
-            observation_generation: 12,
+            system_target: SystemTarget::NiriWindow(NiriWindowId(223)),
+            focused: Focused(true),
+            observation_generation: ObservationGeneration(12),
         }),
         SystemStreamEvent::WindowClosed(WindowClosed {
-            system_target: SystemTarget::NiriWindow(223),
+            system_target: SystemTarget::NiriWindow(NiriWindowId(223)),
         }),
     ]
 }
@@ -112,7 +113,7 @@ fn malformed_archive_is_rejected() {
 fn budget() -> datom_codec::Budget {
     datom_codec::Budget {
         remaining: 8192,
-        reader: protos::ReaderBudget { remaining: 8192 },
+        reader: protos::ReaderBudget::try_from(8192).unwrap(),
         depth: 0,
         maximum_depth: 1024,
     }
@@ -164,4 +165,25 @@ fn every_canonical_datom_line_actualizes_into_a_contract_head() {
         lines, 11,
         "canonical file should carry eleven contract heads"
     );
+}
+
+#[test]
+fn newtype_heads_archive_as_the_types_they_replace() {
+    fn archived<T>(value: &T) -> Vec<u8>
+    where
+        T: for<'a> rkyv::Serialize<
+                rkyv::api::high::HighSerializer<
+                    rkyv::util::AlignedVec,
+                    rkyv::ser::allocator::ArenaHandle<'a>,
+                    rkyv::rancor::Error,
+                >,
+            >,
+    {
+        rkyv::to_bytes::<rkyv::rancor::Error>(value)
+            .expect("archive")
+            .to_vec()
+    }
+    assert_eq!(archived(&NiriWindowId(223)), archived(&223_i64));
+    assert_eq!(archived(&ObservationGeneration(12)), archived(&12_i64));
+    assert_eq!(archived(&Focused(true)), archived(&true));
 }
