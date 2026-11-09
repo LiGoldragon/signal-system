@@ -4,12 +4,12 @@ Signal
   UnwatchFocus.FocusSubscriptionToken
   QueryFocus.FocusSnapshot
   QueryStatus.SystemStatusQuery ]
-[ SubscriptionAccepted.SubscriptionAccepted
-  SubscriptionRetracted.SubscriptionRetracted
-  ObservationTargetMissing.ObservationTargetMissing
-  SystemStatus.SystemStatus
-  SystemRequestUnimplemented.SystemRequestUnimplemented
-  FocusObservation.FocusObservation ]
+[ SubscriptionAccepted
+  SubscriptionRetracted
+  ObservationTargetMissing
+  SystemStatus
+  SystemRequestUnimplemented
+  FocusObservation ]
 [ NiriWindowId.Integer
   SystemTarget.[ NiriWindow.NiriWindowId ]
   ObservationGeneration.Integer
@@ -30,4 +30,4 @@ Signal
   SystemRequestUnimplemented.{ SystemOperationKind SystemUnimplementedReason }
   FocusObservation.{ SystemTarget Focused ObservationGeneration }
   WindowClosed.{ SystemTarget }
-  SystemStreamEvent.[ FocusObservation.FocusObservation WindowClosed.WindowClosed ] ]
+  SystemStreamEvent.[ FocusObservation WindowClosed ] ]
